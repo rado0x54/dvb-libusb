@@ -2,8 +2,8 @@
 # struct + vtable + tune/status types shared between the bridge
 # engines and consumers (libdvb_usb's tools / external apps).
 
-dvb_handle_inc = include_directories('include')
-
-dvb_handle_dep = declare_dependency(
-  include_directories: dvb_handle_inc,
+add_library(dvb_handle INTERFACE)
+target_include_directories(dvb_handle INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
 )

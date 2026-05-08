@@ -58,18 +58,18 @@ The lifted upstream chip drivers (`si2168`, `si2157`, `mn88472`,
 `tda18250`, `lgdt3306a`) aren't vendored. They're pulled on demand
 from `torvalds/linux` at a pinned tag (see
 `scripts/lifted-manifest.txt`) into a gitignored `chips/lifted/` directory.
-Run the fetch script once before configuring meson:
+Run the fetch script once before configuring CMake:
 
 ```sh
 scripts/fetch-lifted.sh                        # default tag
 LINUX_TAG=v6.14 scripts/fetch-lifted.sh        # override
 ```
 
-Build with meson:
+Build with CMake:
 
 ```sh
-meson setup build
-meson compile -C build
+cmake -S . -B build
+cmake --build build -j
 ```
 
 Configure errors out with a clear hint if `chips/lifted/` is empty.
@@ -77,7 +77,7 @@ Configure errors out with a clear hint if `chips/lifted/` is empty.
 ### Build options
 
 ```sh
-meson configure build -Dchip_driver_verbose=true   # verbose chip dev_dbg
+cmake -S . -B build -DDVB_LIBUSB_CHIP_DRIVER_VERBOSE=ON   # verbose chip dev_dbg
 ```
 
 Heavy — produces hundreds of lines per tune. Useful when chasing chip-init
@@ -171,8 +171,18 @@ dvb_dib0700_shutdown();
 dvb_em28xx_shutdown();
 ```
 
-Meson consumers can use the project as a subproject and link
-`dvb_libusb_dep`.
+CMake consumers can pull this repo in as a submodule (or
+`FetchContent_Declare`) and `add_subdirectory(dvb-libusb)`, then
+link the resulting target:
+
+```cmake
+add_subdirectory(third_party/dvb-libusb)
+target_link_libraries(myapp PRIVATE dvb_libusb::dvb_libusb)
+```
+
+Tools (`dvb_devices`, `dvb_pid_dump`) and install rules default OFF
+when consumed via `add_subdirectory`; flip with
+`-DDVB_LIBUSB_BUILD_TOOLS=ON` / `-DDVB_LIBUSB_INSTALL=ON`.
 
 ## Limitations
 

@@ -2,6 +2,11 @@
 build/
 build-*/
 .cache/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
 
 # Lifted upstream chip drivers — populated by scripts/fetch-lifted.sh,
 # tracked only by manifest. See README "Building" for details.
