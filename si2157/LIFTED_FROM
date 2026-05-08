@@ -1,0 +1,11 @@
+Source: torvalds/linux @ tag pinned in scripts/lifted-manifest.txt
+  drivers/media/tuners/si2157.c               → ../lifted/si2157/si2157.c
+  drivers/media/tuners/si2157.h               → ../lifted/si2157/si2157.h
+  drivers/media/tuners/si2157_priv.h          → ../lifted/si2157/si2157_priv.h
+
+Silicon Labs Si2146/2147/2148/2157/2158/2177 silicon tuner. Used by
+both WinTV-dualHD variants (DVB and 01595 ATSC). The same upstream
+driver covers all six chip variants — board attach picks the right
+one via the i2c_device_id `driver_data` field.
+
+Run scripts/fetch-lifted.sh before building.

@@ -1,0 +1,6 @@
+option(
+  'chip_driver_verbose',
+  type:        'boolean',
+  value:       false,
+  description: 'Enable verbose dev_dbg / pr_debug logging in the lifted upstream chip drivers (si2168, si2157, mn88472, tda18250, lgdt3306a). Heavy — produces hundreds of lines per tune. Toggle with `meson configure -Dchip_driver_verbose=true`.',
+)

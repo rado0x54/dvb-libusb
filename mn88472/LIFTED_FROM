@@ -1,0 +1,9 @@
+Source: torvalds/linux @ tag pinned in scripts/lifted-manifest.txt
+  drivers/media/dvb-frontends/mn88472.c       → ../lifted/mn88472/mn88472.c
+  drivers/media/dvb-frontends/mn88472.h       → ../lifted/mn88472/mn88472.h
+  drivers/media/dvb-frontends/mn88472_priv.h  → ../lifted/mn88472/mn88472_priv.h
+
+Panasonic MN88472 DVB-T/T2/C demodulator. Used by Microsoft Xbox
+One Digital TV Tuner.
+
+Run scripts/fetch-lifted.sh before building.

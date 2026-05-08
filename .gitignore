@@ -1,0 +1,18 @@
+# Build outputs
+build/
+build-*/
+.cache/
+
+# Lifted upstream chip drivers — populated by scripts/fetch-lifted.sh,
+# tracked only by manifest. See README "Building" for details.
+lifted/
+
+# Editor noise
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Compile DB symlink some setups create at the repo root
+compile_commands.json

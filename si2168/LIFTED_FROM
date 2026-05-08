@@ -1,0 +1,11 @@
+Source: torvalds/linux @ tag pinned in scripts/lifted-manifest.txt
+  drivers/media/dvb-frontends/si2168.c        → ../lifted/si2168/si2168.c
+  drivers/media/dvb-frontends/si2168.h        → ../lifted/si2168/si2168.h
+  drivers/media/dvb-frontends/si2168_priv.h   → ../lifted/si2168/si2168_priv.h
+
+Silicon Labs Si2168 DVB-T/T2/C demodulator. Used by Hauppauge
+WinTV-dualHD (the DVB variant). Compiled in userland against
+linuxdvbkpi via `-include linuxdvbkpi/linuxdvbkpi.h`. No source
+modifications; fixes go in the polyfill, not here.
+
+Run scripts/fetch-lifted.sh before building.

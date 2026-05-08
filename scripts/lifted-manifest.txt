@@ -1,0 +1,35 @@
+# Manifest of upstream Linux chip-driver source files lifted verbatim
+# into this project. Edited together with the LINUX_TAG below.
+#
+# Format (whitespace-separated):
+#   <upstream-path-under-linux-tree>  <local-dest-path-under-lifted/>
+#
+# All entries are pulled from the same Linux tag; bumping the tag
+# bumps every chip driver in lock-step. To update one driver
+# independently, change LINUX_TAG to a more recent tag, run
+# fetch-lifted.sh, and verify the build still compiles + the chip
+# tests still pass on hardware.
+
+# --- Si2168 (DVB-T/T2/C demod, used by Hauppauge WinTV-dualHD DVB) ---
+drivers/media/dvb-frontends/si2168.c           si2168/si2168.c
+drivers/media/dvb-frontends/si2168.h           si2168/si2168.h
+drivers/media/dvb-frontends/si2168_priv.h      si2168/si2168_priv.h
+
+# --- Si2157 (silicon tuner, used by both WinTV-dualHD variants) ---
+drivers/media/tuners/si2157.c                  si2157/si2157.c
+drivers/media/tuners/si2157.h                  si2157/si2157.h
+drivers/media/tuners/si2157_priv.h             si2157/si2157_priv.h
+
+# --- LGDT3306A (ATSC/QAM demod, used by WinTV-dualHD 01595 ATSC) ---
+drivers/media/dvb-frontends/lgdt3306a.c        lgdt3306a/lgdt3306a.c
+drivers/media/dvb-frontends/lgdt3306a.h        lgdt3306a/lgdt3306a.h
+
+# --- MN88472 (DVB-T/T2/C demod, used by Microsoft Xbox One Tuner) ---
+drivers/media/dvb-frontends/mn88472.c          mn88472/mn88472.c
+drivers/media/dvb-frontends/mn88472.h          mn88472/mn88472.h
+drivers/media/dvb-frontends/mn88472_priv.h     mn88472/mn88472_priv.h
+
+# --- TDA18250 (silicon tuner, used by Microsoft Xbox One Tuner) ---
+drivers/media/tuners/tda18250.c                tda18250/tda18250.c
+drivers/media/tuners/tda18250.h                tda18250/tda18250.h
+drivers/media/tuners/tda18250_priv.h           tda18250/tda18250_priv.h
