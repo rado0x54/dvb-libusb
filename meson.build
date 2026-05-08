@@ -1,5 +1,5 @@
 project(
-  'dvb_usb', ['c'],
+  'dvb_libusb', ['c'],
   version: '0.1.0',
   license: 'GPL-2.0-or-later',
   default_options: [
@@ -72,15 +72,15 @@ subdir('bridges')         # bridge protocol + DVB engine, per family
 
 # ---- Top-level shared library ------------------------------------ *
 #
-# `libdvb_usb` is the only artifact a downstream consumer links
+# `libdvb_libusb` is the only artifact a downstream consumer links
 # against. It link_whole's the chip drivers (their only outward
 # footprint is the constructor emitted by module_i2c_driver — would
 # be discarded under link_with) plus every per-family DVB engine
 # (so the engines' board tables are present in the symbol map for
 # discover_all to walk). Everything else is link_with.
 
-libdvb_usb = shared_library(
-  'dvb_usb',
+libdvb_libusb = shared_library(
+  'dvb_libusb',
   link_whole: [
     chips_lib,
     dvb_em28xx_lib,
@@ -99,8 +99,8 @@ libdvb_usb = shared_library(
 )
 
 # Single dep for downstream consumers (tools, third-party apps).
-dvb_usb_dep = declare_dependency(
-  link_with: libdvb_usb,
+dvb_libusb_dep = declare_dependency(
+  link_with: libdvb_libusb,
   dependencies: [
     dvb_handle_dep,
     dvb_em28xx_dep,

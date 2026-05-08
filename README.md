@@ -16,7 +16,7 @@ adding a row to a board table.
 
 The repo ships:
 
-- **`libdvb_usb`**, a single shared library wrapping the whole stack
+- **`libdvb_libusb`**, a single shared library wrapping the whole stack
   behind bridge-generic engine APIs.
 - **`tools/dvb_devices`** — list supported boards and detect plugged-in
   ones.
@@ -24,7 +24,7 @@ The repo ships:
   TS stream (optionally PID-filtered) to stdout.
 
 Not in this repo: any minisatip / SAT>IP plugin glue. That layer
-lives separately and consumes `libdvb_usb` like any other client.
+lives separately and consumes `libdvb_libusb` like any other client.
 
 ## Supported devices
 
@@ -123,7 +123,7 @@ ffprobe /tmp/cap.ts                            # ffmpeg
 
 ## Library usage
 
-`libdvb_usb` is a single shared library. Consumers link it and
+`libdvb_libusb` is a single shared library. Consumers link it and
 include the per-bridge DVB engine headers:
 
 ```c
@@ -160,7 +160,7 @@ dvb_em28xx_shutdown();
 ```
 
 Meson consumers can use the project as a subproject and link
-`dvb_usb_dep`.
+`dvb_libusb_dep`.
 
 ## Limitations
 
@@ -181,7 +181,7 @@ Meson consumers can use the project as a subproject and link
 ┌────────────────────────────────────────────────────────────────┐
 │ tools/  +  third-party consumers (your SAT>IP plugin, app, …)   │
 └─────────────────────────────┬───────────────────────────────────┘
-                              │ libdvb_usb public API
+                              │ libdvb_libusb public API
                               │ (dvb_em28xx_* / dvb_dib0700_*)
 ┌─────────────────────────────┴───────────────────────────────────┐
 │ bridges/em28xx/dvb        │  bridges/dib0700/dvb                 │
@@ -235,7 +235,7 @@ headers are authoritative**. At a high level:
   files that `scripts/fetch-lifted.sh` pulls into `chips/lifted/`. License
   matches each upstream file's SPDX header. Not vendored here.
 
-The combined static library `libdvb_usb` and the binaries built
+The combined static library `libdvb_libusb` and the binaries built
 from `tools/` link MIT and GPL code together. MIT is
 [GPL-compatible per the FSF](https://www.gnu.org/licenses/license-list.html#Expat),
 so the combined work distributes under GPL-2.0-or-later (see
