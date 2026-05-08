@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * linuxdvbkpi — Linux kernel API polyfill for userland chip-driver lift.
  *

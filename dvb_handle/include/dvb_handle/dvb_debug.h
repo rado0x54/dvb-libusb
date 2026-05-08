@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * Runtime debug toggle for the DVB engines + library consumers.
  * Off by default; flip on by setting `DVB_DEBUG=1` in the environment

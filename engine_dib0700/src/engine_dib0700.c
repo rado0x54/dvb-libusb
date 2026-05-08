@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * engine_dib0700 — bridge lifecycle for dib0700-based DVB USB
  * devices. Same shape as engine_em28xx; the dib0700-specific

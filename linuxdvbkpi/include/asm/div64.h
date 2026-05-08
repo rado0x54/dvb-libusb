@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * <asm/div64.h> polyfill — upstream chip drivers (lgdt3306a) include
  * this for `do_div`, which our `<linux/kernel.h>` already polyfills.

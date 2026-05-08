@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /* Stub — chip drivers only forward-declare struct media_device for
  * optional media-controller integration. We don't expose the
  * controller; this header just makes the type name resolve. */

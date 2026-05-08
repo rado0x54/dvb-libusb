@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * usbq — libusb wrapper. Single-file implementation: the device
  * surface (open/claim/control/bulk_read/bulk_write) plus the async

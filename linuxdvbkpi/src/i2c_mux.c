@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * i2c-mux polyfill implementation. The mux's child adapter forwards
  * each i2c transfer through the parent adapter, calling the chip

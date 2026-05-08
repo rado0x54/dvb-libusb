@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * Shared types for the DVB engine layer + library consumers.
  *
@@ -9,9 +9,10 @@
  * handles through the same vtable — interchangeable from the
  * caller's perspective.
  *
- * License: GPL-2.0-or-later. The shared types are header-only
- * MIT in spirit but the wider stack (chip drivers, engine glue) is
- * GPL-2.0+, so we tag this consistently.
+ * License: MIT (clean-room types; no upstream-Linux derivation).
+ * Note that the wider stack contains GPL-2.0+ code (the lifted chip
+ * drivers and the bridge ports) — see README "License" for the
+ * combined-work story.
  */
 
 #ifndef DVB_HANDLE_DVB_HANDLE_H

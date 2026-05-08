@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /* Some chip drivers reach for <linux/dev_printk.h> directly. Same
  * surface as device.h, just split-out in upstream — alias it. */
 #ifndef LINUXDVBKPI_LINUX_DEV_PRINTK_H

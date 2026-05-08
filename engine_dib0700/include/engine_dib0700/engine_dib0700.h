@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * engine_dib0700 — bridge-generic engine for all DVB USB devices
  * built on the DiBcom DiB0700 USB bridge family. Same shape as

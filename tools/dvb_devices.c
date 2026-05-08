@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * dvb_devices — list DVB hardware this build knows about and/or
  * has plugged in. No tuning, no streaming.

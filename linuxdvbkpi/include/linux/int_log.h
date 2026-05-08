@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /* mn88472 uses intlog10 to compute CNR from chip register values.
  * Returns log10(value) * 2^24 (Q24 fixed-point), matching upstream's
  * <linux/int_log.h> intlog10 contract. */

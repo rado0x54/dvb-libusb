@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 #ifndef LINUXDVBKPI_LINUX_SLAB_H
 #define LINUXDVBKPI_LINUX_SLAB_H
 

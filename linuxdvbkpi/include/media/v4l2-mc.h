@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * v4l2-mc polyfill — covers two upstream things our chip drivers
  * touch by including this header:

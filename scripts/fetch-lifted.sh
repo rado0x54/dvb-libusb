@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: GPL-2.0-or-later
+# SPDX-License-Identifier: MIT
 #
 # Fetch every upstream Linux chip-driver source file listed in
 # lifted-manifest.txt at the pinned LINUX_TAG, into the gitignored

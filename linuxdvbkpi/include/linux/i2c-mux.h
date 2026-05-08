@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * i2c-mux polyfill — minimal subset sufficient for upstream demods that
  * expose an i2c gate to the tuner (si2168). The mux exposes a virtual

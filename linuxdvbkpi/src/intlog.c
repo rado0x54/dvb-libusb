@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * intlog10 — fixed-point log10 the kernel exposes via <linux/int_log.h>.
  *

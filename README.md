@@ -210,12 +210,33 @@ Meson consumers can use the project as a subproject and link
 
 ## License
 
-GPL-2.0-or-later. The lifted upstream chip drivers are GPL-2.0+;
-the bridge ports derive from upstream em28xx / dvb-usb code and
-inherit the same license. The kernel-API polyfill (`linuxdvbkpi/`)
-is GPL-2.0+ at top-level for consistency, even though it's
-clean-room code that doesn't derive from any GPL source — you're
-welcome to fork and re-license that file alone if you have a
-non-GPL combined work, but the published artifact is GPL.
+The repository is a combined work; **per-file `SPDX-License-Identifier`
+headers are authoritative**. At a high level:
 
-See `LICENSE` for the full GPL-2.0 text.
+- **MIT** — clean-room code with no upstream-Linux derivation:
+  `linuxdvbkpi/`, `usbq/`, `dvb_handle/`, the engine lifecycle
+  (`engine_em28xx/src/engine_em28xx.c` + headers,
+  `engine_dib0700/src/engine_dib0700.c` + headers), `tools/`, and
+  the build helpers in `scripts/`.
+
+- **GPL-2.0-or-later** — derivative of upstream Linux media drivers:
+  the bridge ports (`em28xx/`, `dib0700/`) and the per-board attach
+  recipes (`engine_em28xx/src/boards.c`, `engine_dib0700/src/boards.c`,
+  which transcribe upstream `em28xx-dvb.c` / `dib0700_devices.c`
+  init functions).
+
+- **GPL-2.0-or-later** — lifted verbatim from upstream Linux: the
+  files that `scripts/fetch-lifted.sh` pulls into `lifted/`. License
+  matches each upstream file's SPDX header. Not vendored here.
+
+The combined static library `libdvb_usb` and the binaries built
+from `tools/` link MIT and GPL code together. MIT is
+[GPL-compatible per the FSF](https://www.gnu.org/licenses/license-list.html#Expat),
+so the combined work distributes under GPL-2.0-or-later (see
+`LICENSE`). The MIT-licensed sources keep their MIT terms in source
+form — fork the polyfill or the usbq wrapper and reuse them under
+MIT in a non-GPL context if you want; the only restriction is that
+you can't redistribute them combined with the GPL parts under
+non-GPL terms.
+
+`LICENSES/` holds the canonical text of each license used.

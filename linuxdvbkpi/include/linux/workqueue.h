@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * workqueue polyfill — no-op stubs for delayed_work. The only
  * consumer in our lifted chip drivers (si2157) uses delayed_work to

@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later */
+/* SPDX-License-Identifier: MIT */
 /*
  * usbq — thin libusb wrapper. Owns the USB-device handle, sync
  * control/bulk transfers, and an async streaming layer on top of a
