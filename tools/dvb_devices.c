@@ -18,8 +18,8 @@
  */
 
 #include "dvb_handle/dvb_handle.h"
-#include "engine_em28xx/engine_em28xx.h"
-#include "engine_dib0700/engine_dib0700.h"
+#include "dvb_em28xx/dvb_em28xx.h"
+#include "dvb_dib0700/dvb_dib0700.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -44,8 +44,8 @@ static int usage(const char *argv0) {
 static void print_supported(void) {
     const dvb_supported_board_t *em_list, *dib_list;
     int em_n = 0, dib_n = 0;
-    em_list  = engine_em28xx_supported_boards (&em_n);
-    dib_list = engine_dib0700_supported_boards(&dib_n);
+    em_list  = dvb_em28xx_supported_boards (&em_n);
+    dib_list = dvb_dib0700_supported_boards(&dib_n);
 
     printf("Supported devices (%d board record%s):\n",
            em_n + dib_n, (em_n + dib_n) == 1 ? "" : "s");
@@ -71,8 +71,8 @@ static int print_detected(const char *fw_dir) {
 
     dvb_frontend_handle_t *handles[MAX_HANDLES] = {0};
     int n = 0;
-    n += engine_em28xx_discover_all (&handles[n], MAX_HANDLES - n);
-    n += engine_dib0700_discover_all(&handles[n], MAX_HANDLES - n);
+    n += dvb_em28xx_discover_all (&handles[n], MAX_HANDLES - n);
+    n += dvb_dib0700_discover_all(&handles[n], MAX_HANDLES - n);
 
     printf("Detected (plugged in, %d frontend%s):\n",
            n, n == 1 ? "" : "s");
@@ -83,8 +83,8 @@ static int print_detected(const char *fw_dir) {
         printf("  (none — check that supported hardware is plugged in)\n");
     }
 
-    engine_dib0700_shutdown();
-    engine_em28xx_shutdown();
+    dvb_dib0700_shutdown();
+    dvb_em28xx_shutdown();
     return n > 0 ? 0 : 1;
 }
 

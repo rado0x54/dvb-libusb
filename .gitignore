@@ -5,7 +5,7 @@ build-*/
 
 # Lifted upstream chip drivers — populated by scripts/fetch-lifted.sh,
 # tracked only by manifest. See README "Building" for details.
-lifted/
+chips/lifted/
 
 # Editor noise
 .vscode/

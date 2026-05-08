@@ -1,9 +1,0 @@
-Source: torvalds/linux @ tag pinned in scripts/lifted-manifest.txt
-  drivers/media/dvb-frontends/lgdt3306a.c     → ../lifted/lgdt3306a/lgdt3306a.c
-  drivers/media/dvb-frontends/lgdt3306a.h     → ../lifted/lgdt3306a/lgdt3306a.h
-
-LG Electronics LGDT3306A demodulator — ATSC 1.0 (8-VSB) +
-DVBC_ANNEX_B (US cable QAM-64/256). Used by Hauppauge WinTV-dualHD
-01595 ATSC/QAM. No external firmware blob (ROM-only).
-
-Run scripts/fetch-lifted.sh before building.

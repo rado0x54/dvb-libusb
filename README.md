@@ -16,8 +16,8 @@ adding a row to a board table.
 
 The repo ships:
 
-- **`libdvb_usb`**, a static library wrapping the whole stack behind
-  bridge-generic engine APIs.
+- **`libdvb_usb`**, a single shared library wrapping the whole stack
+  behind bridge-generic engine APIs.
 - **`tools/dvb_devices`** — list supported boards and detect plugged-in
   ones.
 - **`tools/dvb_pid_dump`** — tune to a frequency and dump the resulting
@@ -52,7 +52,7 @@ Run `tools/dvb_devices` for the live list:
 The lifted upstream chip drivers (`si2168`, `si2157`, `mn88472`,
 `tda18250`, `lgdt3306a`) aren't vendored. They're pulled on demand
 from `torvalds/linux` at a pinned tag (see
-`scripts/lifted-manifest.txt`) into a gitignored `lifted/` directory.
+`scripts/lifted-manifest.txt`) into a gitignored `chips/lifted/` directory.
 Run the fetch script once before configuring meson:
 
 ```sh
@@ -67,7 +67,7 @@ meson setup build
 meson compile -C build
 ```
 
-Configure errors out with a clear hint if `lifted/` is empty.
+Configure errors out with a clear hint if `chips/lifted/` is empty.
 
 ### Build options
 
@@ -123,21 +123,21 @@ ffprobe /tmp/cap.ts                            # ffmpeg
 
 ## Library usage
 
-`libdvb_usb` is a single static library. Consumers link it and
-include the umbrella headers:
+`libdvb_usb` is a single shared library. Consumers link it and
+include the per-bridge DVB engine headers:
 
 ```c
 #include <dvb_handle/dvb_handle.h>
-#include <engine_em28xx/engine_em28xx.h>
-#include <engine_dib0700/engine_dib0700.h>
+#include <dvb_em28xx/dvb_em28xx.h>
+#include <dvb_dib0700/dvb_dib0700.h>
 #include <linuxdvbkpi/firmware_root.h>
 
 linuxdvbkpi_set_firmware_root("/path/to/firmware");
 
 dvb_frontend_handle_t *handles[8] = {0};
 int n = 0;
-n += engine_em28xx_discover_all (&handles[n], 8 - n);
-n += engine_dib0700_discover_all(&handles[n], 8 - n);
+n += dvb_em28xx_discover_all (&handles[n], 8 - n);
+n += dvb_dib0700_discover_all(&handles[n], 8 - n);
 
 for (int i = 0; i < n; i++) {
     dvb_frontend_handle_t *fe = handles[i];
@@ -155,8 +155,8 @@ for (int i = 0; i < n; i++) {
     /* ... */
 }
 
-engine_dib0700_shutdown();
-engine_em28xx_shutdown();
+dvb_dib0700_shutdown();
+dvb_em28xx_shutdown();
 ```
 
 Meson consumers can use the project as a subproject and link
@@ -179,24 +179,29 @@ Meson consumers can use the project as a subproject and link
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│ tools/  +  third-party consumers (your minisatip plugin etc.)   │
+│ tools/  +  third-party consumers (your SAT>IP plugin, app, …)   │
 └─────────────────────────────┬───────────────────────────────────┘
                               │ libdvb_usb public API
+                              │ (dvb_em28xx_* / dvb_dib0700_*)
 ┌─────────────────────────────┴───────────────────────────────────┐
-│ engine_em28xx        │  engine_dib0700                          │
-│ (board table:        │  (board table:                            │
-│  WinTV DVB,          │   Xbox One Tuner)                         │
-│  WinTV ATSC)         │                                           │
-└──────┬──────────────┴────────┬─────────────────────────────────┘
-       │                       │
-┌──────┴───────┐  ┌──────────┴─────┐
-│ em28xx port  │  │ dib0700 port   │  ← manual ports of the bridge
-│ (manual)     │  │ (manual)       │    protocol (USB control + i²c)
-└──────┬───────┘  └──────────┬─────┘
-       │                       │
-       └─── via i²c → ─────────┴──→  Lifted upstream chip drivers
-                                       (si2168, si2157, lgdt3306a,
-                                        mn88472, tda18250)
+│ bridges/em28xx/dvb        │  bridges/dib0700/dvb                 │
+│ (DVB engine: board table, │  (DVB engine: board table,           │
+│  per-frontend lifecycle,  │   per-frontend lifecycle, vtable)    │
+│  vtable)                  │                                       │
+│  · WinTV-dualHD DVB       │  · Xbox One Tuner                    │
+│  · WinTV-dualHD ATSC      │                                       │
+└──────┬───────────────────┴────────┬─────────────────────────────┘
+       │ em28xx_* (protocol)         │ dib0700_* (protocol)
+┌──────┴────────────────┐  ┌─────────┴───────────┐
+│ bridges/em28xx/bridge │  │ bridges/dib0700/    │  ← manual ports of
+│ (USB protocol: vendor │  │   bridge            │    the bridge protocol
+│  control, i²c, GPIO,  │  │ (USB protocol)      │    (USB control + i²c)
+│  TS-bus enable)       │  │                     │
+└──────┬────────────────┘  └─────────┬───────────┘
+       │                              │
+       └─── via i²c → ────────────────┴──→  chips/  (lifted upstream:
+                                              si2168, si2157, lgdt3306a,
+                                              mn88472, tda18250)
 
    ┌──────────────────────────────────────────────────────────────┐
    │ linuxdvbkpi — Linux kernel-API polyfill                       │
@@ -214,19 +219,20 @@ The repository is a combined work; **per-file `SPDX-License-Identifier`
 headers are authoritative**. At a high level:
 
 - **MIT** — clean-room code with no upstream-Linux derivation:
-  `linuxdvbkpi/`, `usbq/`, `dvb_handle/`, the engine lifecycle
-  (`engine_em28xx/src/engine_em28xx.c` + headers,
-  `engine_dib0700/src/engine_dib0700.c` + headers), `tools/`, and
+  `linuxdvbkpi/`, `usbq/`, `dvb_handle/`, the per-bridge engine
+  lifecycle (`bridges/em28xx/dvb/src/dvb_em28xx.c` + headers,
+  `bridges/dib0700/dvb/src/dvb_dib0700.c` + headers), `tools/`, and
   the build helpers in `scripts/`.
 
 - **GPL-2.0-or-later** — derivative of upstream Linux media drivers:
-  the bridge ports (`em28xx/`, `dib0700/`) and the per-board attach
-  recipes (`engine_em28xx/src/boards.c`, `engine_dib0700/src/boards.c`,
+  the bridge ports (`bridges/em28xx/bridge/`, `bridges/dib0700/bridge/`)
+  and the per-board attach recipes (`bridges/em28xx/dvb/src/boards.c`,
+  `bridges/dib0700/dvb/src/boards.c`,
   which transcribe upstream `em28xx-dvb.c` / `dib0700_devices.c`
   init functions).
 
 - **GPL-2.0-or-later** — lifted verbatim from upstream Linux: the
-  files that `scripts/fetch-lifted.sh` pulls into `lifted/`. License
+  files that `scripts/fetch-lifted.sh` pulls into `chips/lifted/`. License
   matches each upstream file's SPDX header. Not vendored here.
 
 The combined static library `libdvb_usb` and the binaries built

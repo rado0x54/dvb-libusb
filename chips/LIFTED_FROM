@@ -1,0 +1,27 @@
+All chip drivers in this directory are lifted verbatim from upstream
+Linux at the tag pinned in scripts/lifted-manifest.txt. They're not
+vendored in this repository — scripts/fetch-lifted.sh pulls them on
+demand into the gitignored chips/lifted/ subdirectory.
+
+Source: torvalds/linux @ <LINUX_TAG>
+
+  drivers/media/dvb-frontends/si2168.{c,h,_priv.h}     → lifted/si2168/
+  drivers/media/tuners/si2157.{c,h,_priv.h}            → lifted/si2157/
+  drivers/media/dvb-frontends/lgdt3306a.{c,h}          → lifted/lgdt3306a/
+  drivers/media/dvb-frontends/mn88472.{c,h,_priv.h}    → lifted/mn88472/
+  drivers/media/tuners/tda18250.{c,h,_priv.h}          → lifted/tda18250/
+
+The five drivers cover every chip used by the supported boards:
+
+  - WinTV-dualHD (DVB):       si2168 + si2157
+  - WinTV-dualHD 01595 ATSC:  lgdt3306a + si2157
+  - Xbox One Tuner:           mn88472 + tda18250
+
+Compiled in userland against linuxdvbkpi/ via
+`-include linuxdvbkpi/linuxdvbkpi.h`. No source modifications; fixes
+go in the polyfill, not here.
+
+Run `scripts/fetch-lifted.sh` before building.
+
+License: GPL-2.0-or-later (each upstream file's SPDX header is
+authoritative).

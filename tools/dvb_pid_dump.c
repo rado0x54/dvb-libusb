@@ -32,8 +32,8 @@
  */
 
 #include "dvb_handle/dvb_handle.h"
-#include "engine_em28xx/engine_em28xx.h"
-#include "engine_dib0700/engine_dib0700.h"
+#include "dvb_em28xx/dvb_em28xx.h"
+#include "dvb_dib0700/dvb_dib0700.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -78,8 +78,8 @@ static uint16_t ts_pid(const uint8_t *pkt) {
  * to handles[]. Returns total handles published. */
 static int discover_all(dvb_frontend_handle_t **handles, int max) {
     int n = 0;
-    n += engine_em28xx_discover_all (&handles[n], max - n);
-    n += engine_dib0700_discover_all(&handles[n], max - n);
+    n += dvb_em28xx_discover_all (&handles[n], max - n);
+    n += dvb_dib0700_discover_all(&handles[n], max - n);
     return n;
 }
 
@@ -92,8 +92,8 @@ static void list_handles(dvb_frontend_handle_t **handles, int n) {
 
 static void shutdown_all(void) {
     /* Mirror the plugin's reverse-of-discovery shutdown order. */
-    engine_dib0700_shutdown();
-    engine_em28xx_shutdown();
+    dvb_dib0700_shutdown();
+    dvb_em28xx_shutdown();
 }
 
 static int usage(const char *argv0) {

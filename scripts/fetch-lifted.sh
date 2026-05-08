@@ -30,7 +30,7 @@ LINUX_TAG="${LINUX_TAG:-v6.13}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MANIFEST="${REPO_ROOT}/scripts/lifted-manifest.txt"
-DEST_ROOT="${REPO_ROOT}/lifted"
+DEST_ROOT="${REPO_ROOT}/chips/lifted"
 BASE_URL="https://raw.githubusercontent.com/torvalds/linux/${LINUX_TAG}"
 
 if ! command -v curl >/dev/null; then

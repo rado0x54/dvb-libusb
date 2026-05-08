@@ -12,9 +12,9 @@ project(
 
 cc = meson.get_compiler('c')
 
-# Strict warnings on top of warning_level=2 — but only on our own
-# code. Lifted upstream chip drivers use a relaxed set defined as
-# `chip_lift_c_args` below.
+# Strict warnings on top of warning_level=2 — applied only to our own
+# code. Lifted upstream chip drivers use the relaxed
+# `chip_lift_c_args` set defined below.
 project_cflags = cc.get_supported_arguments([
   '-Wstrict-prototypes',
   '-Wmissing-prototypes',
@@ -24,34 +24,23 @@ project_cflags = cc.get_supported_arguments([
 ])
 add_project_arguments(project_cflags, language: 'c')
 
-# Single non-system dependency: libusb 1.0.
 libusb_dep = dependency('libusb-1.0', version: '>=1.0.20', required: true)
 
-# ---- Lifted chip-driver source presence check -------------------- *
+# ---- Lifted-source presence check ------------------------------- *
 #
-# We don't vendor the upstream Linux chip drivers in this repo —
-# scripts/fetch-lifted.sh pulls them into a gitignored `lifted/` dir
-# at the pinned LINUX_TAG. If the user hasn't run it yet, fail
-# configure with a clear hint instead of letting compile errors
-# bubble up later.
+# scripts/fetch-lifted.sh pulls upstream chip-driver sources at the
+# pinned LINUX_TAG into chips/lifted/. The chips/ subdir's own
+# meson.build re-checks per-file and references them; here we just
+# fail configure early with a friendly message if the user hasn't
+# run the fetch step yet.
 
 fs = import('fs')
-required_lifted = [
-  'lifted/si2168/si2168.c',
-  'lifted/si2157/si2157.c',
-  'lifted/mn88472/mn88472.c',
-  'lifted/tda18250/tda18250.c',
-  'lifted/lgdt3306a/lgdt3306a.c',
-]
-foreach path : required_lifted
-  if not fs.exists(meson.project_source_root() / path)
-    error(
-      'Lifted upstream chip driver not found: @0@.\n'.format(path) +
-      'Run scripts/fetch-lifted.sh to populate the lifted/ directory ' +
-      'before configuring meson. See README "Building" for details.'
-    )
-  endif
-endforeach
+if not fs.exists(meson.project_source_root() / 'chips' / 'lifted' / 'si2168' / 'si2168.c')
+  error(
+    'Lifted upstream chip drivers not present (chips/lifted/ is empty).\n' +
+    'Run scripts/fetch-lifted.sh before configuring meson. See README.'
+  )
+endif
 
 # Common compile flags for every lifted-upstream chip-driver lib.
 # Chip drivers don't compile clean under our strict warning set; we
@@ -73,42 +62,29 @@ chip_lift_c_args = [
   '-Wno-unused-parameter',
 ]
 
-# ---- Layers, leaf-first ------------------------------------------ *
+# ---- Component static libs (leaf-first) -------------------------- *
 
-subdir('dvb_handle')      # Header-only: handle/vtable types
-subdir('linuxdvbkpi')     # Linux kernel-API polyfill
+subdir('dvb_handle')      # header-only types
+subdir('linuxdvbkpi')     # kernel-API polyfill
 subdir('usbq')            # libusb wrapper
-subdir('em28xx')          # em28xx USB bridge port (manual)
-subdir('dib0700')         # DiB0700 USB bridge port (manual)
+subdir('chips')           # all 5 lifted upstream chip drivers
+subdir('bridges')         # bridge protocol + DVB engine, per family
 
-# Lifted upstream chip drivers (link_whole'd into the engines):
-subdir('si2168')
-subdir('si2157')
-subdir('mn88472')
-subdir('tda18250')
-subdir('lgdt3306a')
-
-# Bridge-generic engines orchestrating bridge + chip drivers:
-subdir('engine_em28xx')
-subdir('engine_dib0700')
-
-# ---- Bundled library --------------------------------------------- *
+# ---- Top-level shared library ------------------------------------ *
 #
-# `libdvb_usb` is a single static library that consumers link
-# against. It link_whole's the engines (which in turn link_whole the
-# chip drivers — needed for module_i2c_driver constructors), and
-# pulls in usbq + linuxdvbkpi + the bridge ports as link_with.
+# `libdvb_usb` is the only artifact a downstream consumer links
+# against. It link_whole's the chip drivers (their only outward
+# footprint is the constructor emitted by module_i2c_driver — would
+# be discarded under link_with) plus every per-family DVB engine
+# (so the engines' board tables are present in the symbol map for
+# discover_all to walk). Everything else is link_with.
 
-dvb_usb_lib = static_library(
+libdvb_usb = shared_library(
   'dvb_usb',
   link_whole: [
-    engine_em28xx_lib,
-    engine_dib0700_lib,
-    si2168_lib,
-    si2157_lib,
-    mn88472_lib,
-    tda18250_lib,
-    lgdt3306a_lib,
+    chips_lib,
+    dvb_em28xx_lib,
+    dvb_dib0700_lib,
   ],
   dependencies: [
     em28xx_dep,
@@ -117,19 +93,19 @@ dvb_usb_lib = static_library(
     linuxdvbkpi_dep,
     dvb_handle_dep,
   ],
+  install: true,
+  soversion: '0',
+  version:   meson.project_version(),
 )
 
+# Single dep for downstream consumers (tools, third-party apps).
 dvb_usb_dep = declare_dependency(
-  link_with: dvb_usb_lib,
+  link_with: libdvb_usb,
   dependencies: [
     dvb_handle_dep,
-    engine_em28xx_dep,
-    engine_dib0700_dep,
-    linuxdvbkpi_dep,
-    em28xx_dep,
-    dib0700_dep,
-    usbq_dep,
-    libusb_dep,
+    dvb_em28xx_dep,
+    dvb_dib0700_dep,
+    linuxdvbkpi_dep,   # for linuxdvbkpi_set_firmware_root
   ],
 )
 

@@ -1,9 +1,0 @@
-Source: torvalds/linux @ tag pinned in scripts/lifted-manifest.txt
-  drivers/media/tuners/tda18250.c             → ../lifted/tda18250/tda18250.c
-  drivers/media/tuners/tda18250.h             → ../lifted/tda18250/tda18250.h
-  drivers/media/tuners/tda18250_priv.h        → ../lifted/tda18250/tda18250_priv.h
-
-NXP TDA18250 silicon tuner. Used by Microsoft Xbox One Digital TV
-Tuner.
-
-Run scripts/fetch-lifted.sh before building.
