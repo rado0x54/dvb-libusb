@@ -96,6 +96,25 @@ int usbq_reset(usbq_dev_t *d) {
     return d ? libusb_reset_device(d->handle) : -EINVAL;
 }
 
+int usbq_count(const char *vidpid) {
+    uint16_t vid, pid;
+    if (parse_vidpid(vidpid, &vid, &pid) != 0) return -EINVAL;
+    if (usbq_init() != 0) return -EIO;
+
+    libusb_device **list;
+    ssize_t n = libusb_get_device_list(g_ctx, &list);
+    if (n < 0) return (int)n;
+
+    int matches = 0;
+    for (ssize_t i = 0; i < n; i++) {
+        struct libusb_device_descriptor desc;
+        if (libusb_get_device_descriptor(list[i], &desc) != 0) continue;
+        if (desc.idVendor == vid && desc.idProduct == pid) matches++;
+    }
+    libusb_free_device_list(list, 1);
+    return matches;
+}
+
 /* ---- descriptor probes ------------------------------------------- */
 
 int usbq_get_device_descriptor(usbq_dev_t *d, void *out, size_t len) {

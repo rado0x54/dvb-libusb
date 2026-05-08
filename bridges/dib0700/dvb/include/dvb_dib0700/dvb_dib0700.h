@@ -27,6 +27,10 @@ void dvb_dib0700_shutdown(void);
  * dvb_em28xx_supported_boards() for semantics. */
 const dvb_supported_board_t *dvb_dib0700_supported_boards(int *count_out);
 
+/* Scan plugged-in USB devices against the board table. See
+ * dvb_em28xx_scan_present() for semantics. No firmware required. */
+int dvb_dib0700_scan_present(dvb_present_board_t *out, int max);
+
 #ifdef __cplusplus
 }
 #endif

@@ -43,9 +43,14 @@ welcome; bring hardware.
 Run `tools/dvb_devices` for the live list:
 
 ```sh
-./build/tools/dvb_devices                      # supported boards (no USB scan)
-./build/tools/dvb_devices --detected /path/firmware  # plugged-in boards
+./build/tools/dvb_devices              # default: supported boards + which are connected
+./build/tools/dvb_devices --supported  # supported only (static, no USB scan)
+./build/tools/dvb_devices --detected   # connected only (USB scan, no firmware needed)
 ```
+
+Detection is pure libusb enumeration — no device claim, no firmware
+required. You'll see what hardware is plugged in even before
+firmware is in place.
 
 ## Building
 
@@ -96,24 +101,31 @@ here:
 - Xbox One Tuner: `dvb-usb-dib0700-1.20.fw`, `dvb-demod-mn88472-02.fw`
 
 Get them from the [linux-firmware](https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/tree/)
-tree (or your distro's `firmware-linux-nonfree` equivalent). Put them
-in any directory and point either:
+tree (or your distro's `firmware-linux-nonfree` equivalent).
 
-- the `FIRMWARE_DIR` environment variable, or
-- the `linuxdvbkpi_set_firmware_root()` API at it.
+Lookup chain — same shape as the kernel's `request_firmware()`,
+mirrored by `linuxdvbkpi`:
 
-The tools take the directory as their first positional arg.
+1. `linuxdvbkpi_set_firmware_root()` (programmatic override; library API)
+2. `$FIRMWARE_DIR` (env override)
+3. `/usr/local/lib/firmware`
+4. `/usr/lib/firmware`
+5. `/lib/firmware` (the kernel default)
+
+Drop the blobs in any of those — the tools and library find them
+automatically. No CLI arg needed unless you want to override.
 
 ## Running the tools
 
 ```sh
-# 1. List what's plugged in:
-./build/tools/dvb_devices --detected /path/to/firmware
+# 1. See what's supported and what's plugged in (no firmware needed):
+./build/tools/dvb_devices
 
-# 2. Tune a channel and dump TS packets to stdout:
-./build/tools/dvb_pid_dump /path/to/firmware dvbc 386000000 8000000 -1 30 \
-    > /tmp/cap.ts
-# args: <fw_dir> <delsys> <freq_hz> <bw_hz> <pid|-1=all> <duration_s> [idx]
+# 2. Tune a channel and dump TS packets to stdout (firmware must
+#    be in /lib/firmware or one of the fallback paths, OR
+#    $FIRMWARE_DIR set):
+./build/tools/dvb_pid_dump dvbc 386000000 8000000 -1 30 > /tmp/cap.ts
+# args: <delsys> <freq_hz> <bw_hz> <pid|-1=all> <duration_s> [idx]
 # delsys: dvbt | dvbt2 | dvbc | atsc
 
 # 3. Inspect the captured TS:

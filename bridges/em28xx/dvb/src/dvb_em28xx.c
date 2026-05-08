@@ -468,6 +468,28 @@ const dvb_supported_board_t *dvb_em28xx_supported_boards(int *count_out) {
     return cache;
 }
 
+int dvb_em28xx_scan_present(dvb_present_board_t *out, int max) {
+    if (!out || max <= 0) return 0;
+    /* Pure libusb enumeration. Doesn't need an open device or a
+     * configured firmware path — only init'd context. */
+    if (usbq_init() != 0) return 0;
+    int n = 0;
+    for (const em28xx_board_t *b = em28xx_board_table;
+         b->name && n < max; b++) {
+        for (int i = 0; b->vidpids[i] && n < max; i++) {
+            int present = usbq_count(b->vidpids[i]);
+            if (present > 0) {
+                out[n].bridge        = "em28xx";
+                out[n].name          = b->name;
+                out[n].vidpid        = b->vidpids[i];
+                out[n].num_frontends = b->num_frontends;
+                n++;
+            }
+        }
+    }
+    return n;
+}
+
 void dvb_em28xx_shutdown(void) {
     while (g_devices) {
         dvb_em28xx_dev_t *dev = g_devices;

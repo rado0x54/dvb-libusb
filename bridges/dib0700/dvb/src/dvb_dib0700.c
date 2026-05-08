@@ -473,6 +473,26 @@ const dvb_supported_board_t *dvb_dib0700_supported_boards(int *count_out) {
     return cache;
 }
 
+int dvb_dib0700_scan_present(dvb_present_board_t *out, int max) {
+    if (!out || max <= 0) return 0;
+    if (usbq_init() != 0) return 0;
+    int n = 0;
+    for (const dib0700_board_t *b = dib0700_board_table;
+         b->name && n < max; b++) {
+        for (int i = 0; b->vidpids[i] && n < max; i++) {
+            int present = usbq_count(b->vidpids[i]);
+            if (present > 0) {
+                out[n].bridge        = "dib0700";
+                out[n].name          = b->name;
+                out[n].vidpid        = b->vidpids[i];
+                out[n].num_frontends = b->num_frontends;
+                n++;
+            }
+        }
+    }
+    return n;
+}
+
 void dvb_dib0700_shutdown(void) {
     while (g_devices) {
         dvb_dib0700_dev_t *dev = g_devices;

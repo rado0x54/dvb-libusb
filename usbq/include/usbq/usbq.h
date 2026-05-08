@@ -39,6 +39,13 @@ usbq_dev_t *usbq_open  (const char *vidpid);
 void        usbq_close (usbq_dev_t *dev);
 int         usbq_reset (usbq_dev_t *dev);
 
+/* Count plugged-in USB devices matching `vidpid` ("VVVV:PPPP" hex)
+ * without opening any of them. Does not claim, does not bring up;
+ * just enumerates the bus. Useful for "is the hardware here?"
+ * checks before any firmware path is configured. Returns ≥0 on
+ * success, negative on error. */
+int         usbq_count (const char *vidpid);
+
 int usbq_get_device_descriptor       (usbq_dev_t *dev, void *out, size_t len);
 int usbq_get_configspace             (usbq_dev_t *dev, void *out, size_t len);
 int usbq_get_string_descriptor_ascii (usbq_dev_t *dev, uint8_t index,

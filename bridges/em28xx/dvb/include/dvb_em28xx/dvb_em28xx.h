@@ -61,6 +61,13 @@ void dvb_em28xx_shutdown(void);
  * of the process. No USB / hardware contact. */
 const dvb_supported_board_t *dvb_em28xx_supported_boards(int *count_out);
 
+/* Scan plugged-in USB devices against the board table. Pure libusb
+ * enumeration — no device claim, no bridge bring-up, no firmware
+ * required. Writes up to `max` entries to `out`, returns the count
+ * actually written. Useful as a "is supported hardware present?"
+ * check before any firmware path is configured. */
+int dvb_em28xx_scan_present(dvb_present_board_t *out, int max);
+
 #ifdef __cplusplus
 }
 #endif

@@ -62,6 +62,17 @@ typedef struct dvb_engine_vtable {
     void (*close)(void *engine_state);     /* engine teardown */
 } dvb_engine_vtable_t;
 
+/* Per-board record describing a USB device that's currently
+ * plugged in and matches one of the engine's supported boards.
+ * Returned by `*_scan_present()` — pure libusb enumeration; no
+ * device claim, no bridge bring-up, no firmware required. */
+typedef struct dvb_present_board {
+    const char *bridge;        /* "em28xx", "dib0700" */
+    const char *name;          /* board name, e.g. "Hauppauge WinTV-dualHD" */
+    const char *vidpid;        /* matching USB ID string, e.g. "2040:0265" */
+    int         num_frontends; /* board's frontend count */
+} dvb_present_board_t;
+
 /* Read-only descriptor of a board the engine knows how to drive
  * (whether or not it's currently plugged in). Each engine exposes
  * its compiled-in board table via a `*_supported_boards()`

@@ -1,34 +1,38 @@
 /* SPDX-License-Identifier: MIT */
 /*
  * dvb_pid_dump — bridge-agnostic TS dumper for any supported DVB
- * USB device. Scans all supported devices across both engines
- * (engine_em28xx + engine_dib0700) at startup, lists what was
- * found, then drives the device at index 0 (or `idx` if given).
+ * USB device. Scans the bus, opens the device at index 0 (or `idx`
+ * if given), tunes, and dumps 188-aligned TS packets — optionally
+ * filtered to one PID — to stdout.
  *
  * Standalone tool — no SAT>IP / streaming-server dependency.
- * Useful for hardware diagnostics or piping TS into ffmpeg / VLC.
  *
  *   usage:
- *     dvb_pid_dump --list <fw_dir>
- *     dvb_pid_dump <fw_dir> <delsys> <freq> <bw> [pid] [duration_s] [idx]
+ *     dvb_pid_dump --list
+ *     dvb_pid_dump <delsys> <freq_hz> <bw_hz> [pid|-1] [duration_s] [idx]
  *
- *     fw_dir     : directory containing firmware blobs.
  *     delsys     : dvbt | dvbt2 | dvbc | atsc
  *     pid        : 13-bit TS PID to filter on. -1 = pass all. Default 0.
  *     duration_s : default 5.
  *     idx        : 0-based index into the discovered-devices list.
  *                  Default 0 (first match). Run with --list to see all.
  *
- *   e.g. (single device, dump PAT for 5 s):
- *     dvb_pid_dump ../../artifacts/firmware \
- *       dvbc 386000000 8000000 0 5 > /tmp/pat.ts
+ *   e.g. (dump PAT for 5 s):
+ *     dvb_pid_dump dvbc 386000000 8000000 0 5 > /tmp/pat.ts
  *
  *   e.g. (two devices plugged in — test the second one):
- *     dvb_pid_dump ../../artifacts/firmware \
- *       dvbc 386000000 8000000 0 5 1 > /tmp/pat.ts
+ *     dvb_pid_dump dvbc 386000000 8000000 0 5 1 > /tmp/pat.ts
  *
- *   e.g. (just enumerate):
- *     dvb_pid_dump --list ../../artifacts/firmware
+ * Firmware lookup (matches the kernel's request_firmware contract,
+ * via linuxdvbkpi):
+ *   1. $FIRMWARE_DIR  (env override — set this if your blobs are
+ *                      somewhere else)
+ *   2. /usr/local/lib/firmware
+ *   3. /usr/lib/firmware
+ *   4. /lib/firmware  (the kernel default)
+ * Drop blobs in any of those and the tool finds them automatically.
+ * If a blob is missing, the engine's open() prints a clear error and
+ * exits non-zero.
  */
 
 #include "dvb_handle/dvb_handle.h"
@@ -43,8 +47,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-
-extern void linuxdvbkpi_set_firmware_root(const char *path);
 
 #define TS_PACKET 188
 #define MAX_HANDLES 8
@@ -99,9 +101,12 @@ static void shutdown_all(void) {
 static int usage(const char *argv0) {
     fprintf(stderr,
             "usage:\n"
-            "  %s --list <fw_dir>\n"
-            "  %s <fw_dir> <dvbt|dvbt2|dvbc|atsc> <freq_hz> <bw_hz> "
-            "[pid|-1] [duration_s] [idx]\n",
+            "  %s --list\n"
+            "  %s <dvbt|dvbt2|dvbc|atsc> <freq_hz> <bw_hz> "
+            "[pid|-1] [duration_s] [idx]\n"
+            "\n"
+            "Firmware: $FIRMWARE_DIR if set, else /usr/local/lib/firmware,\n"
+            "          /usr/lib/firmware, /lib/firmware (kernel default).\n",
             argv0, argv0);
     return 2;
 }
@@ -111,10 +116,7 @@ int main(int argc, char *argv[]) {
 
     /* --list mode: just enumerate and exit. */
     if (!strcmp(argv[1], "--list")) {
-        if (argc != 3) return usage(argv[0]);
-        const char *fw_dir = argv[2];
-        linuxdvbkpi_set_firmware_root(fw_dir);
-        setenv("FIRMWARE_DIR", fw_dir, /*overwrite=*/1);
+        if (argc != 2) return usage(argv[0]);
 
         dvb_frontend_handle_t *handles[MAX_HANDLES] = {0};
         int n = discover_all(handles, MAX_HANDLES);
@@ -128,24 +130,23 @@ int main(int argc, char *argv[]) {
     }
 
     /* Streaming mode. */
-    if (argc < 5 || argc > 8) return usage(argv[0]);
-    const char *fw_dir = argv[1];
+    if (argc < 4 || argc > 7) return usage(argv[0]);
     uint32_t delsys;
-    if (parse_delsys(argv[2], &delsys) < 0) {
-        fprintf(stderr, "unknown delsys '%s'\n", argv[2]);
+    if (parse_delsys(argv[1], &delsys) < 0) {
+        fprintf(stderr, "unknown delsys '%s'\n", argv[1]);
         return 2;
     }
-    uint32_t freq_hz    = (uint32_t)strtoul(argv[3], NULL, 0);
-    uint32_t bw_hz      = (uint32_t)strtoul(argv[4], NULL, 0);
-    int      filter_pid = (argc >= 6) ? atoi(argv[5]) : 0;
-    int      duration_s = (argc >= 7) ? atoi(argv[6]) : 5;
-    int      idx        = (argc >= 8) ? atoi(argv[7]) : 0;
+    uint32_t freq_hz    = (uint32_t)strtoul(argv[2], NULL, 0);
+    uint32_t bw_hz      = (uint32_t)strtoul(argv[3], NULL, 0);
+    int      filter_pid = (argc >= 5) ? atoi(argv[4]) : 0;
+    int      duration_s = (argc >= 6) ? atoi(argv[5]) : 5;
+    int      idx        = (argc >= 7) ? atoi(argv[6]) : 0;
 
-    /* Plumb firmware dir into the polyfill BEFORE engine open. The
-     * dib0700 engine reads $FIRMWARE_DIR directly for its bridge
-     * ramcode upload; export so it's visible to that path too. */
-    linuxdvbkpi_set_firmware_root(fw_dir);
-    setenv("FIRMWARE_DIR", fw_dir, /*overwrite=*/1);
+    /* Firmware: rely on the polyfill's auto-find chain
+     * ($FIRMWARE_DIR → /usr/local/lib/firmware → /usr/lib/firmware →
+     * /lib/firmware). The tool doesn't override the path; if blobs
+     * aren't on disk somewhere, the engine open() returns a clear
+     * error. */
 
     int success = 0;
     dvb_frontend_handle_t *handles[MAX_HANDLES] = {0};
