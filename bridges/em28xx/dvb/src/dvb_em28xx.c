@@ -477,12 +477,19 @@ int dvb_em28xx_scan_present(dvb_present_board_t *out, int max) {
     for (const em28xx_board_t *b = em28xx_board_table;
          b->name && n < max; b++) {
         for (int i = 0; b->vidpids[i] && n < max; i++) {
-            int present = usbq_count(b->vidpids[i]);
-            if (present > 0) {
-                out[n].bridge        = "em28xx";
-                out[n].name          = b->name;
-                out[n].vidpid        = b->vidpids[i];
-                out[n].num_frontends = b->num_frontends;
+            /* Walk every physical USB device matching this VID:PID
+             * — multiple instances of the same board produce
+             * multiple entries (different bus_number / device_address). */
+            usbq_device_info_t devs[16];
+            int dn = usbq_enumerate(b->vidpids[i], devs,
+                                    (int)(sizeof(devs)/sizeof(devs[0])));
+            for (int k = 0; k < dn && n < max; k++) {
+                out[n].bridge         = "em28xx";
+                out[n].name           = b->name;
+                out[n].vidpid         = b->vidpids[i];
+                out[n].num_frontends  = b->num_frontends;
+                out[n].bus_number     = devs[k].bus_number;
+                out[n].device_address = devs[k].device_address;
                 n++;
             }
         }

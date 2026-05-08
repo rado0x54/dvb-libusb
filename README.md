@@ -43,14 +43,14 @@ welcome; bring hardware.
 Run `tools/dvb_devices` for the live list:
 
 ```sh
-./build/tools/dvb_devices              # default: supported boards + which are connected
-./build/tools/dvb_devices --supported  # supported only (static, no USB scan)
-./build/tools/dvb_devices --detected   # connected only (USB scan, no firmware needed)
+./build/tools/dvb_devices              # default: plugged-in devices (one entry per physical device)
+./build/tools/dvb_devices --supported  # full board table this build can drive (no USB scan)
 ```
 
 Detection is pure libusb enumeration — no device claim, no firmware
-required. You'll see what hardware is plugged in even before
-firmware is in place.
+required. You'll see what's plugged in even before firmware is in
+place. Two physical instances of the same board appear as two
+entries with different bus/dev addresses.
 
 ## Building
 
@@ -180,9 +180,12 @@ Meson consumers can use the project as a subproject and link
   sleeps mid-session; chip-side i²c still works, but the bulk-IN URBs
   return empty. Workaround: replug the device, or restart the
   process. Fix shape (deferred): libusb hotplug callbacks.
-- **One device per VID:PID**: `usbq_open()` returns the first match.
-  Multi-instance support (e.g. two WinTV-dualHDs in one host) needs
-  an enumeration API.
+- **One device per VID:PID at open time**: `usbq_open()` claims the
+  first match. `dvb_devices` enumerates every plugged-in physical
+  device (one entry per bus/address), but the per-frontend `open()`
+  path doesn't yet take a bus/address selector — opening two of the
+  same board concurrently currently needs `usbq_open()` to grow that
+  selector.
 - **Single backend**: libusb only. iousbhost was prototyped in a
   predecessor and didn't reduce the discontinuity floor on macOS;
   the abstraction was dropped here for simplicity.

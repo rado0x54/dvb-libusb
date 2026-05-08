@@ -96,23 +96,34 @@ int usbq_reset(usbq_dev_t *d) {
     return d ? libusb_reset_device(d->handle) : -EINVAL;
 }
 
-int usbq_count(const char *vidpid) {
-    uint16_t vid, pid;
-    if (parse_vidpid(vidpid, &vid, &pid) != 0) return -EINVAL;
+int usbq_enumerate(const char *vidpid, usbq_device_info_t *out, int max) {
+    if (!out || max <= 0) return -EINVAL;
+    uint16_t want_vid = 0, want_pid = 0;
+    int filter = 0;
+    if (vidpid) {
+        if (parse_vidpid(vidpid, &want_vid, &want_pid) != 0) return -EINVAL;
+        filter = 1;
+    }
     if (usbq_init() != 0) return -EIO;
 
     libusb_device **list;
     ssize_t n = libusb_get_device_list(g_ctx, &list);
     if (n < 0) return (int)n;
 
-    int matches = 0;
-    for (ssize_t i = 0; i < n; i++) {
+    int written = 0;
+    for (ssize_t i = 0; i < n && written < max; i++) {
         struct libusb_device_descriptor desc;
         if (libusb_get_device_descriptor(list[i], &desc) != 0) continue;
-        if (desc.idVendor == vid && desc.idProduct == pid) matches++;
+        if (filter && (desc.idVendor != want_vid || desc.idProduct != want_pid))
+            continue;
+        snprintf(out[written].vidpid, sizeof(out[written].vidpid),
+                 "%04x:%04x", desc.idVendor, desc.idProduct);
+        out[written].bus_number     = libusb_get_bus_number(list[i]);
+        out[written].device_address = libusb_get_device_address(list[i]);
+        written++;
     }
     libusb_free_device_list(list, 1);
-    return matches;
+    return written;
 }
 
 /* ---- descriptor probes ------------------------------------------- */

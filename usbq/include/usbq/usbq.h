@@ -39,12 +39,24 @@ usbq_dev_t *usbq_open  (const char *vidpid);
 void        usbq_close (usbq_dev_t *dev);
 int         usbq_reset (usbq_dev_t *dev);
 
-/* Count plugged-in USB devices matching `vidpid` ("VVVV:PPPP" hex)
- * without opening any of them. Does not claim, does not bring up;
- * just enumerates the bus. Useful for "is the hardware here?"
- * checks before any firmware path is configured. Returns ≥0 on
- * success, negative on error. */
-int         usbq_count (const char *vidpid);
+/* Enumerate plugged-in USB devices matching `vidpid` ("VVVV:PPPP"
+ * hex) without opening any of them. Does not claim, does not bring
+ * up; just walks the bus. Useful for "what hardware is here?"
+ * checks before any firmware path is configured. Pass NULL for
+ * vidpid to list every USB device on the host.
+ *
+ * Writes up to `max` entries to `out`. Returns the number written,
+ * or a negative errno on error. The returned bus_number +
+ * device_address pair uniquely identifies one physical device on
+ * the host within the current bus state. */
+typedef struct usbq_device_info {
+    char    vidpid[16];        /* "VVVV:PPPP" — null-terminated */
+    uint8_t bus_number;
+    uint8_t device_address;
+} usbq_device_info_t;
+
+int         usbq_enumerate (const char *vidpid,
+                            usbq_device_info_t *out, int max);
 
 int usbq_get_device_descriptor       (usbq_dev_t *dev, void *out, size_t len);
 int usbq_get_configspace             (usbq_dev_t *dev, void *out, size_t len);

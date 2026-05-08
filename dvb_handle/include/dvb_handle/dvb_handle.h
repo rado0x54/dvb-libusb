@@ -65,12 +65,18 @@ typedef struct dvb_engine_vtable {
 /* Per-board record describing a USB device that's currently
  * plugged in and matches one of the engine's supported boards.
  * Returned by `*_scan_present()` — pure libusb enumeration; no
- * device claim, no bridge bring-up, no firmware required. */
+ * device claim, no bridge bring-up, no firmware required.
+ *
+ * Two physical instances of the same board show up as separate
+ * entries with the same `name` / `vidpid` but different
+ * `bus_number` / `device_address`. */
 typedef struct dvb_present_board {
     const char *bridge;        /* "em28xx", "dib0700" */
     const char *name;          /* board name, e.g. "Hauppauge WinTV-dualHD" */
     const char *vidpid;        /* matching USB ID string, e.g. "2040:0265" */
     int         num_frontends; /* board's frontend count */
+    uint8_t     bus_number;
+    uint8_t     device_address;
 } dvb_present_board_t;
 
 /* Read-only descriptor of a board the engine knows how to drive

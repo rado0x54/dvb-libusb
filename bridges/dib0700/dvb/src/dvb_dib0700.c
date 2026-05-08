@@ -480,12 +480,19 @@ int dvb_dib0700_scan_present(dvb_present_board_t *out, int max) {
     for (const dib0700_board_t *b = dib0700_board_table;
          b->name && n < max; b++) {
         for (int i = 0; b->vidpids[i] && n < max; i++) {
-            int present = usbq_count(b->vidpids[i]);
-            if (present > 0) {
-                out[n].bridge        = "dib0700";
-                out[n].name          = b->name;
-                out[n].vidpid        = b->vidpids[i];
-                out[n].num_frontends = b->num_frontends;
+            /* One entry per physical USB device matching this VID:PID
+             * — two of the same board produce two entries with
+             * different bus_number / device_address. */
+            usbq_device_info_t devs[16];
+            int dn = usbq_enumerate(b->vidpids[i], devs,
+                                    (int)(sizeof(devs)/sizeof(devs[0])));
+            for (int k = 0; k < dn && n < max; k++) {
+                out[n].bridge         = "dib0700";
+                out[n].name           = b->name;
+                out[n].vidpid         = b->vidpids[i];
+                out[n].num_frontends  = b->num_frontends;
+                out[n].bus_number     = devs[k].bus_number;
+                out[n].device_address = devs[k].device_address;
                 n++;
             }
         }
