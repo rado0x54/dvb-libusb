@@ -16,7 +16,7 @@
  *
  * No caching, no range tracking, no volatile-table — drivers express
  * those as hints to the kernel and we just re-issue the i2c xfer
- * each time. That's exactly the behaviour we want in userland: every
+ * each time. That's exactly the behaviour we want in userspace: every
  * read/write goes to the chip, never a stale cached value.
  */
 
@@ -53,7 +53,7 @@ struct regmap *regmap_init_i2c(struct i2c_client *client,
 
 struct regmap *devm_regmap_init_i2c(struct i2c_client *client,
                                     const struct regmap_config *config) {
-    /* devm in the kernel ties lifetime to the device — in userland we
+    /* devm in the kernel ties lifetime to the device — in userspace we
      * leak one regmap per chip, freed implicitly at process exit. The
      * chip-driver remove path is rarely exercised in our flow, so this
      * is fine. (If we ever care, we can hang the regmap off the

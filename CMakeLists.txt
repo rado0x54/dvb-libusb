@@ -11,7 +11,7 @@ endif()
 project(dvb_libusb
   VERSION 0.1.0
   LANGUAGES C
-  DESCRIPTION "Userland libusb-based DVB driver bundle"
+  DESCRIPTION "Userspace libusb-based DVB driver bundle"
 )
 
 # ---- Top-level vs. submodule detection -------------------------------- *

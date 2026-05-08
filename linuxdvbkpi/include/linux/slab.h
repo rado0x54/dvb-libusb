@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Kernel GFP_* flags — all map to "regular allocation" in userland. */
+/* Kernel GFP_* flags — all map to "regular allocation" in userspace. */
 #define GFP_KERNEL  0
 #define GFP_ATOMIC  0
 #define GFP_NOWAIT  0

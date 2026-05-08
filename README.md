@@ -1,12 +1,12 @@
 # dvb-libusb
 
-Userland driver framework for DVB USB devices, built on libusb. Lets
+Userspace driver framework for DVB USB devices, built on libusb. Lets
 you bring up demodulator + tuner chips and capture the resulting MPEG-TS
 stream **without a kernel `dvb-usb` build** — useful on macOS, FreeBSD,
 or any host where the in-kernel DVB stack isn't an option.
 
 The project lifts the chip drivers (demods, silicon tuners) verbatim
-from upstream Linux at a pinned tag, compiled in userland against a
+from upstream Linux at a pinned tag, compiled in userspace against a
 kernel-API polyfill (`linuxdvbkpi/`). Bridge protocol code (em28xx,
 DiB0700) is hand-ported because the upstream framework it lives in
 (dvb-usb-v2 / dvb-core) is too entangled with kernel-internal APIs to

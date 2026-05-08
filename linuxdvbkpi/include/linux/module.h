@@ -9,7 +9,7 @@
 #define LINUXDVBKPI_CAT(a, b)  LINUXDVBKPI_CAT_(a, b)
 #define LINUXDVBKPI_UNIQ(prefix) LINUXDVBKPI_CAT(prefix, __COUNTER__)
 
-/* Module metadata macros — no-op in userland. Each call gets a
+/* Module metadata macros — no-op in userspace. Each call gets a
  * unique identifier so multiple invocations don't redefine. */
 #define MODULE_LICENSE(s)        static const char *const LINUXDVBKPI_UNIQ(__module_license_) = (s)
 #define MODULE_AUTHOR(s)         static const char *const LINUXDVBKPI_UNIQ(__module_author_) = (s)
@@ -33,7 +33,7 @@
 #define MODULE_PARM_DESC(name, desc)                /* no-op */
 
 /* `module_i2c_driver(drv)` and friends register a driver at module
- * load. In userland we provide a registry-based hook (see linux/i2c.h)
+ * load. In userspace we provide a registry-based hook (see linux/i2c.h)
  * that the macro hooks into via a constructor function. */
 #define module_init(fn)         /* no-op — i2c_driver constructors use module_i2c_driver */
 #define module_exit(fn)         /* no-op */

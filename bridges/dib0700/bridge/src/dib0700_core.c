@@ -15,7 +15,7 @@
 #include <string.h>
 
 /* Forward declarations of the i2c shim wired here at open-time. */
-extern const struct i2c_algorithm dib0700_i2c_algo_userland;
+extern const struct i2c_algorithm dib0700_i2c_algo_userspace;
 
 dib0700_dev_t *dib0700_open(usbq_dev_t *usb) {
     if (!usb) return NULL;
@@ -26,7 +26,7 @@ dib0700_dev_t *dib0700_open(usbq_dev_t *usb) {
 
     /* Wire the linuxdvbkpi i2c_adapter shim. master_xfer in
      * dib0700_i2c.c will reach back into dev via algo_data. */
-    dev->i2c_adap.algo      = &dib0700_i2c_algo_userland;
+    dev->i2c_adap.algo      = &dib0700_i2c_algo_userspace;
     dev->i2c_adap.algo_data = dev;
     snprintf(dev->i2c_adap.name, sizeof(dev->i2c_adap.name),
              "dib0700-i2c");

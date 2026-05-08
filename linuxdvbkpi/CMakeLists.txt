@@ -1,4 +1,4 @@
-# linuxdvbkpi — Linux kernel-API polyfill for userland chip-driver
+# linuxdvbkpi — Linux kernel-API polyfill for userspace chip-driver
 # lift. Lets us compile drivers/media/dvb-frontends/*.c and
 # drivers/media/tuners/*.c verbatim from upstream Linux without any
 # source modifications.

@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: MIT */
 /*
- * linuxdvbkpi — Linux kernel API polyfill for userland chip-driver lift.
+ * linuxdvbkpi — Linux kernel API polyfill for userspace chip-driver lift.
  *
  * Goal: compile upstream Linux DVB demod / tuner sources from
  * drivers/media/dvb-frontends and drivers/media/tuners UNCHANGED in
- * userland by providing the kernel-API surface they consume —
+ * userspace by providing the kernel-API surface they consume —
  * i2c_client, regmap, dvb_frontend, mutex, kmalloc, request_firmware,
  * dev_*, etc.
  *
@@ -58,7 +58,7 @@
  *     - rc_dev / input subsystem — IR remote-control input is not
  *       wired through chip drivers in our stack.
  *
- * Driver-registration model in userland:
+ * Driver-registration model in userspace:
  *
  *   Upstream's `module_i2c_driver(foo_driver)` registers an i2c_driver
  *   with the kernel i2c-core; the core calls `foo_driver.probe(client)`

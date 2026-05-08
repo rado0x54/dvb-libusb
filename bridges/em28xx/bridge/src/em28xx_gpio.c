@@ -13,7 +13,7 @@
  * packet sizes, etc. — everything bridge-side that has to happen
  * before the demod / tuner can be initialised properly.
  *
- * In our flat userland API the orchestration moves up a layer:
+ * In our flat userspace API the orchestration moves up a layer:
  * the engine (or, for now, the bring-up probe) decides when to
  * apply which sequence. This file just runs the sequence given
  * to it.

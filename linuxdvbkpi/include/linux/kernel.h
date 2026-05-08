@@ -72,7 +72,7 @@
 #endif
 
 /* do_div(n, base): kernel macro — sets n = n / base, returns remainder.
- * Userland does straight 64-bit division. The macro expands to a
+ * Userspace does straight 64-bit division. The macro expands to a
  * statement-expression so call-site syntax (`do_div(x, y)`) works as
  * an expression yielding the remainder. */
 #ifndef do_div
@@ -111,7 +111,7 @@
 #define fallthrough __attribute__((__fallthrough__))
 #endif
 
-/* unused()/might_sleep are kernel-side hints — no-op in userland. */
+/* unused()/might_sleep are kernel-side hints — no-op in userspace. */
 #ifndef might_sleep
 #define might_sleep() do { } while (0)
 #endif

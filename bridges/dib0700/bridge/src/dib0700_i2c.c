@@ -103,7 +103,7 @@ static u32 dib0700_i2c_func(struct i2c_adapter *adap) {
     return I2C_FUNC_I2C;
 }
 
-const struct i2c_algorithm dib0700_i2c_algo_userland = {
+const struct i2c_algorithm dib0700_i2c_algo_userspace = {
     .master_xfer   = dib0700_i2c_master_xfer,
     .functionality = dib0700_i2c_func,
 };

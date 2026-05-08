@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * Userland port of drivers/media/usb/em28xx/ (Empia em28xx USB →
+ * Userspace port of drivers/media/usb/em28xx/ (Empia em28xx USB →
  * I²C/TS bridge family). This file is the public surface; everything
  * else lives in src/.
  *
@@ -8,7 +8,7 @@
  * (mirrored locally for porting, not committed to this repo).
  *
  * License: GPL-2.0-or-later. The upstream driver is GPL-2.0+; the
- * userland port preserves that. (The usbq wrapper this layer sits
+ * userspace port preserves that. (The usbq wrapper this layer sits
  * on top of is independently MIT — see usbq/include/usbq/usbq.h.)
  *
  * Authors of the upstream driver this code is derived from:
@@ -20,7 +20,7 @@
  *   …and others. See drivers/media/usb/em28xx/ in the kernel tree
  *   for the full author list.
  *
- * Userland-port scope:
+ * Userspace-port scope:
  *   - Phase C2 (this file's first cut): em28xx_read_reg /
  *     em28xx_write_regs / em28xx_write_reg / em28xx_write_reg_bits
  *     over usbq_control. Enough to read the chip-ID register
@@ -138,7 +138,7 @@ int em28xx_write_reg_bits(em28xx_dev_t *dev, uint16_t reg,
  * struct em28xx_i2c_msg matches the kernel's struct i2c_msg shape:
  * 7-bit slave addr, optional read flag, byte buffer + length. We use
  * our own struct rather than including <linux/i2c.h> to keep the
- * userland surface self-contained.
+ * userspace surface self-contained.
  *
  * em28xx_i2c_xfer drives the array msgs[0..num) over bus `bus`
  * (0 or 1) and returns `num` on success, or a negative errno on

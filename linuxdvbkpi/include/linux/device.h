@@ -13,7 +13,7 @@
 struct device_driver {
     const char *name;
     void *owner;                 /* THIS_MODULE — opaque */
-    int   suppress_bind_attrs;   /* unused in userland; accepted for compat */
+    int   suppress_bind_attrs;   /* unused in userspace; accepted for compat */
 };
 
 struct device {

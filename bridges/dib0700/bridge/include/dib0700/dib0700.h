@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
- * Userland port of drivers/media/usb/dvb-usb/dib0700_core.c (DiBcom
+ * Userspace port of drivers/media/usb/dvb-usb/dib0700_core.c (DiBcom
  * DiB0700 USB bridge). Same shape as em28xx/ — open/close on top of
  * a usbq device, USB control transfers for register R/W and GPIO,
  * an i²c-over-USB master, firmware upload, and a streaming-control
@@ -13,7 +13,7 @@
  * with the dvb-usb framework (struct dvb_usb_device, the dvb-core
  * registration path, the kernel's URB infrastructure, the input
  * subsystem for IR), all of which we explicitly do not mirror in
- * userland. The chip drivers (mn88472/, tda18250/) sitting
+ * userspace. The chip drivers (mn88472/, tda18250/) sitting
  * downstream ARE lifted verbatim via linuxdvbkpi/.
  *
  * Authors of the upstream driver this port is derived from:

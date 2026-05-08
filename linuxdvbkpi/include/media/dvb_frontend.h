@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /*
- * Userland-side mirror of <media/dvb_frontend.h>, narrowed to the
+ * Userspace-side mirror of <media/dvb_frontend.h>, narrowed to the
  * subset chip drivers (demod + tuner) actually consume.
  *
  * What the kernel exports through this header that we DON'T mirror:
