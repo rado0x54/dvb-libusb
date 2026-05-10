@@ -177,15 +177,56 @@ endif()
 
 if(DVB_LIBUSB_INSTALL)
   include(GNUInstallDirs)
-  install(TARGETS dvb_libusb
+  include(CMakePackageConfigHelpers)
+
+  # Every PUBLIC-linked dep of dvb_libusb has to land in the export
+  # set, otherwise find_package consumers see dangling references
+  # ("dvb_libusb::linuxdvbkpi not found"). dvb_handle is INTERFACE
+  # (no on-disk artifact, just headers); linuxdvbkpi is STATIC and
+  # installs its archive — its objects are also folded into the
+  # shared lib, but the import target needs to resolve to a real
+  # file for CMake's bookkeeping to be coherent.
+  install(TARGETS dvb_libusb dvb_handle linuxdvbkpi
+    EXPORT dvb_libusbTargets
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
+
   install(DIRECTORY dvb_handle/include/             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
   install(DIRECTORY linuxdvbkpi/include/            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
   install(DIRECTORY bridges/em28xx/dvb/include/     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
   install(DIRECTORY bridges/dib0700/dvb/include/    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+  # Generate dvb_libusbConfig.cmake (resolves transitive deps like
+  # libusb-1.0 via pkg-config) and dvb_libusbConfigVersion.cmake
+  # (handles VERSION matching for find_package). Together with
+  # dvb_libusbTargets.cmake from the EXPORT set, these are what
+  # makes `find_package(dvb_libusb CONFIG REQUIRED)` work.
+  set(DVB_LIBUSB_CMAKE_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/dvb_libusb)
+
+  configure_package_config_file(
+    cmake/dvb_libusbConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/dvb_libusbConfig.cmake
+    INSTALL_DESTINATION ${DVB_LIBUSB_CMAKE_INSTALL_DIR}
+  )
+  write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/dvb_libusbConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+  )
+
+  install(EXPORT dvb_libusbTargets
+    FILE dvb_libusbTargets.cmake
+    NAMESPACE dvb_libusb::
+    DESTINATION ${DVB_LIBUSB_CMAKE_INSTALL_DIR}
+  )
+  install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/dvb_libusbConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/dvb_libusbConfigVersion.cmake
+    DESTINATION ${DVB_LIBUSB_CMAKE_INSTALL_DIR}
+  )
 endif()
 
 # ---- Configure summary ------------------------------------------------ *

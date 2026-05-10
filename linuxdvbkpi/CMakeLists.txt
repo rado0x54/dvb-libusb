@@ -19,7 +19,14 @@ target_include_directories(linuxdvbkpi PUBLIC
   $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(linuxdvbkpi PRIVATE dvb_libusb_project_flags)
+# BUILD_INTERFACE wrap: dvb_libusb_project_flags is an internal
+# compile-flag INTERFACE target. Static archives normally export
+# their PRIVATE link deps so consumers can complete the link, but
+# those flags carry no symbols — and project_flags isn't part of
+# the install/export set. The genex strips it on export.
+target_link_libraries(linuxdvbkpi PRIVATE
+  $<BUILD_INTERFACE:dvb_libusb_project_flags>
+)
 
 # Compile-time verbosity flag for the lifted chip drivers' dev_dbg /
 # pr_debug output. Off by default; flip with
