@@ -5,7 +5,10 @@
 # License: GPL-2.0-or-later (manual port of upstream
 # drivers/media/usb/em28xx/em28xx-{core,i2c,cards,dvb}.c).
 
-add_library(em28xx STATIC
+# OBJECT lib (rather than STATIC) so its .o's fold into dvb_libusb
+# directly — works for both shared and static dvb_libusb output
+# without needing em28xx in the install/export set.
+add_library(em28xx OBJECT
   src/em28xx_core.c
   src/em28xx_i2c.c
   src/em28xx_gpio.c

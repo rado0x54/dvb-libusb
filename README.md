@@ -78,10 +78,20 @@ Configure errors out with a clear hint if `chips/lifted/` is empty.
 
 ```sh
 cmake -S . -B build -DDVB_LIBUSB_CHIP_DRIVER_VERBOSE=ON   # verbose chip dev_dbg
+cmake -S . -B build -DBUILD_SHARED_LIBS=OFF               # static archive (default: shared)
 ```
 
-Heavy — produces hundreds of lines per tune. Useful when chasing chip-init
-issues; off in normal operation.
+`DVB_LIBUSB_CHIP_DRIVER_VERBOSE` is heavy — hundreds of lines per tune.
+Useful when chasing chip-init issues; off in normal operation.
+
+`BUILD_SHARED_LIBS` is the standard CMake toggle: `ON` (default at
+top-level) ships `libdvb_libusb.so`/`.dylib`; `OFF` ships
+`libdvb_libusb.a` for fully-static downstreams. The static archive
+auto-applies `-Wl,-force_load` (Apple) / `-Wl,--whole-archive` (GNU
+ld) on the consumer's link line so the lifted chip drivers'
+`__attribute__((constructor))` registrations survive — without that,
+ld would silently drop the constructor-only chip TUs and chip attach
+would fail at runtime.
 
 ### Runtime debug
 

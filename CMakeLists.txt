@@ -116,37 +116,92 @@ add_subdirectory(usbq)            # libusb wrapper
 add_subdirectory(chips)           # all 5 lifted upstream chip drivers
 add_subdirectory(bridges)         # bridge protocol + DVB engine, per family
 
-# ---- Top-level shared library ----------------------------------------- *
+# ---- Top-level library ------------------------------------------------ *
 #
 # `dvb_libusb` is the only artifact a downstream consumer links
-# against. The chip drivers and per-family DVB engines are OBJECT
-# libraries so all their .o files (including ones whose symbols are
-# only referenced via the module_i2c_driver constructor or the engine
-# board tables walked by discover_all) end up in the shared lib —
-# this is CMake's analogue of meson's link_whole.
+# against. Type follows BUILD_SHARED_LIBS (default for top-level use
+# is shared, matching the project's historical behavior; consumers
+# building a fully-static binary pass -DBUILD_SHARED_LIBS=OFF).
 #
-# Forced SHARED: the lifted chip drivers register themselves via
-# `__attribute__((constructor))` (the polyfill's module_i2c_driver
-# expansion). Constructor-only TUs produce no externally-visible
-# symbols, so they would be invisible in a static archive's index
-# (ranlib drops them) and the chip registrations would silently
-# disappear. A shared lib preserves them via runtime init.
-add_library(dvb_libusb SHARED
+# The chip drivers and per-family DVB engines are OBJECT libraries
+# so all their .o files (including ones whose symbols are only
+# referenced via the module_i2c_driver constructor or the engine
+# board tables walked by discover_all) end up in the final lib —
+# this is CMake's analogue of meson's link_whole. The OBJECT-lib
+# pattern works for both shared and static output.
+if(PROJECT_IS_TOP_LEVEL AND NOT DEFINED BUILD_SHARED_LIBS)
+  set(BUILD_SHARED_LIBS ON)
+endif()
+
+add_library(dvb_libusb)
+add_library(dvb_libusb::dvb_libusb ALIAS dvb_libusb)
+
+# All internal OBJECT libs are folded in via $<TARGET_OBJECTS:>
+# (objects only — no transitive usage requirements through this
+# path). Inter-OBJECT-lib include / link relationships are handled
+# inside each subdir's CMakeLists; here we just collect their .o's.
+target_sources(dvb_libusb PRIVATE
+  $<TARGET_OBJECTS:usbq>
+  $<TARGET_OBJECTS:em28xx>
+  $<TARGET_OBJECTS:dib0700>
   $<TARGET_OBJECTS:chips>
   $<TARGET_OBJECTS:dvb_em28xx>
   $<TARGET_OBJECTS:dvb_dib0700>
 )
-add_library(dvb_libusb::dvb_libusb ALIAS dvb_libusb)
 
+# Direct deps of the folded objects: libusb-1.0 is referenced by
+# usbq's .o files, linuxdvbkpi by basically everything. Add them at
+# this level so dvb_libusb's link line resolves all symbols whether
+# we ship as .so or .a — and so consumers of an installed static
+# dvb_libusb don't need to know to link libusb themselves.
 target_link_libraries(dvb_libusb
   PUBLIC
     dvb_handle
     linuxdvbkpi
-  PRIVATE
-    em28xx
-    dib0700
-    usbq
+    PkgConfig::libusb
 )
+
+# ---- Static-build constructor preservation ---------------------------- *
+#
+# The lifted chip drivers register themselves via the polyfill's
+# `module_i2c_driver(drv)` macro, which expands to a static
+# __attribute__((constructor)). Constructor-only TUs export no
+# globally-visible symbols, so when libdvb_libusb is a static
+# archive a downstream `ld` will not pull them in lazily — the
+# i2c-driver registry stays empty and chip attach fails at runtime.
+#
+# Fix: when built static, ask consumers' linkers to whole-archive
+# libdvb_libusb itself. We attach platform-appropriate flags as
+# INTERFACE link options so this happens transparently to anyone
+# linking `dvb_libusb::dvb_libusb`. Shared builds need none of this
+# (the .so's runtime loader runs every constructor on dlopen).
+if(NOT BUILD_SHARED_LIBS)
+  # Build tree consumers (our tools/, add_subdirectory consumers):
+  # the target name `dvb_libusb` is in scope, so $<TARGET_FILE:>
+  # resolves to the in-tree archive path. Install tree consumers
+  # (find_package): the imported target is namespaced
+  # (`dvb_libusb::dvb_libusb`) and $<TARGET_FILE:dvb_libusb> doesn't
+  # resolve, so we hardcode the install-prefix-relative path via
+  # $<INSTALL_PREFIX>. ${CMAKE_INSTALL_LIBDIR} is a literal captured
+  # at our config time — that's fine, libdvb_libusb.a always lands
+  # under <prefix>/<libdir>/ by our own install(TARGETS) rule.
+  include(GNUInstallDirs)
+  if(APPLE)
+    target_link_options(dvb_libusb INTERFACE
+      "$<BUILD_INTERFACE:LINKER:-force_load,$<TARGET_FILE:dvb_libusb>>"
+      "$<INSTALL_INTERFACE:LINKER:-force_load,$<INSTALL_PREFIX>/${CMAKE_INSTALL_LIBDIR}/libdvb_libusb.a>"
+    )
+  else()
+    target_link_options(dvb_libusb INTERFACE
+      "$<BUILD_INTERFACE:LINKER:--whole-archive>"
+      "$<BUILD_INTERFACE:$<TARGET_FILE:dvb_libusb>>"
+      "$<BUILD_INTERFACE:LINKER:--no-whole-archive>"
+      "$<INSTALL_INTERFACE:LINKER:--whole-archive>"
+      "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_LIBDIR}/libdvb_libusb.a>"
+      "$<INSTALL_INTERFACE:LINKER:--no-whole-archive>"
+    )
+  endif()
+endif()
 
 # The engines' public headers (`dvb_em28xx/dvb_em28xx.h`,
 # `dvb_dib0700/dvb_dib0700.h`) are part of dvb_libusb's API surface

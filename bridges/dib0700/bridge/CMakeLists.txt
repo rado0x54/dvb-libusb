@@ -5,7 +5,8 @@
 # License: GPL-2.0-or-later (manual port of upstream
 # drivers/media/usb/dvb-usb/dib0700_*.c).
 
-add_library(dib0700 STATIC
+# OBJECT lib — see em28xx/CMakeLists.txt for rationale.
+add_library(dib0700 OBJECT
   src/dib0700_core.c
   src/dib0700_i2c.c
   src/dib0700_fw.c

@@ -3,7 +3,12 @@
 #
 # License: GPL-2.0-or-later (combined work).
 
-add_library(usbq STATIC src/usbq.c)
+# OBJECT lib (rather than STATIC) so when dvb_libusb is built as a
+# static archive, usbq's .o folds in directly. With STATIC, CMake
+# would require usbq to be in the export set (consumers of a static
+# dvb_libusb.a would otherwise see an undefined transitive
+# dependency on usbq.a). usbq is an internal layer.
+add_library(usbq OBJECT src/usbq.c)
 
 target_include_directories(usbq PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
