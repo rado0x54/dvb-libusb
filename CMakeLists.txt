@@ -297,7 +297,11 @@ if(DVB_LIBUSB_INSTALL)
   )
 
   install(DIRECTORY dvb_handle/include/             DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-  install(DIRECTORY linuxdvbkpi/include/            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  # Only install linuxdvbkpi's public api/ tree (firmware_root.h); the
+  # include/ tree carries the kernel-API polyfill (linux/, asm/,
+  # media/), which is an internal implementation detail and must NOT
+  # be on downstream consumers' include path.
+  install(DIRECTORY linuxdvbkpi/api/                DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
   install(DIRECTORY bridges/em28xx/dvb/include/     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
   install(DIRECTORY bridges/dib0700/dvb/include/    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 

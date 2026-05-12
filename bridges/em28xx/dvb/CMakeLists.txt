@@ -25,6 +25,7 @@ target_link_libraries(dvb_em28xx PRIVATE
   chips                     # for headers under chips/lifted/<chip>/
   dvb_handle
   linuxdvbkpi
+  linuxdvbkpi_internal
   usbq
   dvb_libusb_project_flags
 )

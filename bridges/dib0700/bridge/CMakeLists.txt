@@ -19,5 +19,5 @@ target_include_directories(dib0700 PUBLIC
 
 target_link_libraries(dib0700
   PUBLIC  usbq
-  PRIVATE linuxdvbkpi dvb_libusb_project_flags
+  PRIVATE linuxdvbkpi linuxdvbkpi_internal dvb_libusb_project_flags
 )

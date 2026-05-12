@@ -14,9 +14,35 @@ add_library(linuxdvbkpi STATIC
   src/intlog.c
 )
 
-target_include_directories(linuxdvbkpi PUBLIC
+# Public surface (PUBLIC): only the consumer-facing API
+# headers — currently just <linuxdvbkpi/firmware_root.h>. Anything
+# put here transitively propagates to downstream consumers like
+# minisatip.
+#
+# Internal surface (PRIVATE): the kernel-API polyfill — <linux/...>,
+# <asm/...>, <media/...>, and the linuxdvbkpi.h umbrella that chip
+# drivers force-include. These shadow the consumer's system headers
+# if PUBLIC-exported (the polyfill <linux/dvb/frontend.h> intercepts
+# minisatip's #include <linux/dvb/frontend.h>, the <linux/errno.h>
+# polyfill defeats glibc's errno chain, etc.). Keeping the polyfill
+# directory PRIVATE means it's only on the compile path while
+# building linuxdvbkpi's own sources.
+#
+# In-tree consumers that DO need the polyfill (chip drivers, bridge
+# engines) link against the linuxdvbkpi_internal INTERFACE target
+# below instead — that one PRIVATELY propagates the polyfill include
+# dir, so it never reaches dvb_libusb's INTERFACE.
+target_include_directories(linuxdvbkpi
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/api>
+    $<INSTALL_INTERFACE:include>
+  PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+
+add_library(linuxdvbkpi_internal INTERFACE)
+target_include_directories(linuxdvbkpi_internal INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
 )
 
 # BUILD_INTERFACE wrap: dvb_libusb_project_flags is an internal

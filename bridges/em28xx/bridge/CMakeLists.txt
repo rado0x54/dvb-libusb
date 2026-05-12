@@ -21,5 +21,5 @@ target_include_directories(em28xx PUBLIC
 
 target_link_libraries(em28xx
   PUBLIC  usbq
-  PRIVATE linuxdvbkpi dvb_libusb_project_flags
+  PRIVATE linuxdvbkpi linuxdvbkpi_internal dvb_libusb_project_flags
 )

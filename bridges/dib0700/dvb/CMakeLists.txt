@@ -19,6 +19,7 @@ target_link_libraries(dvb_dib0700 PRIVATE
   chips
   dvb_handle
   linuxdvbkpi
+  linuxdvbkpi_internal
   usbq
   dvb_libusb_project_flags
 )

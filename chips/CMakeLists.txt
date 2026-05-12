@@ -56,5 +56,6 @@ target_include_directories(chips PRIVATE
 
 target_link_libraries(chips PRIVATE
   linuxdvbkpi
+  linuxdvbkpi_internal
   dvb_libusb_chip_lift_flags
 )
