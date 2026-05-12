@@ -42,6 +42,13 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
+# Strict -std=c11 (no GNU extensions) doesn't expose POSIX features
+# like clock_gettime/CLOCK_REALTIME on Linux glibc. Request the
+# POSIX.1-2008 surface project-wide so usbq/etc. compile under c11.
+# macOS clang doesn't gate on this macro the same way (compiles
+# regardless), so this is effectively a Linux-only fix.
+add_compile_definitions(_POSIX_C_SOURCE=200809L)
+
 # Static archives get folded into a shared lib downstream, so every
 # component must be PIC-clean.
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -54,6 +61,46 @@ endif()
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(libusb REQUIRED IMPORTED_TARGET "libusb-1.0>=1.0.20")
+
+# Resolve libusb's Libs.private transitives — CoreFoundation/IOKit
+# framework refs on Darwin, -ludev / -lpthread / -lm on Linux when
+# applicable. A downstream consumer linking libusb statically (e.g.
+# minisatip with -DSTATIC=ON, or any consumer that supplies its own
+# libusb-1.0.a) needs these in the final link line; the imported
+# target by default only carries --libs (no Libs.private). pkg-config
+# already populated libusb_STATIC_LDFLAGS_OTHER from --static --libs;
+# fold it into the imported target. Harmless when libusb is consumed
+# dynamically because the .dylib/.so already encodes the same refs.
+if(libusb_STATIC_LDFLAGS_OTHER)
+  target_link_options(PkgConfig::libusb INTERFACE ${libusb_STATIC_LDFLAGS_OTHER})
+endif()
+
+# Optional: force libusb to resolve to its static archive even when
+# both .a and .dylib/.so are available in the same prefix. Useful on
+# macOS where Apple's ld has no -Bstatic equivalent so the linker
+# defaults to picking .dylib; on Linux a consumer-side -DSTATIC=ON
+# already coerces .a selection so this is mostly a no-op there. Enable
+# from the consumer side with -DDVB_LIBUSB_PREFER_LIBUSB_STATIC=ON.
+option(DVB_LIBUSB_PREFER_LIBUSB_STATIC
+  "Replace libusb's pkg-config link reference with a direct path to libusb-1.0.a"
+  OFF)
+if(DVB_LIBUSB_PREFER_LIBUSB_STATIC)
+  set(_dvb_libusb_old_suffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+  find_library(DVB_LIBUSB_LIBUSB_STATIC_PATH NAMES usb-1.0
+    HINTS ${libusb_LIBDIR} ${libusb_LIBRARY_DIRS}
+    NO_DEFAULT_PATH)
+  if(NOT DVB_LIBUSB_LIBUSB_STATIC_PATH)
+    # Fall back to default paths in case the .pc didn't carry libdir.
+    find_library(DVB_LIBUSB_LIBUSB_STATIC_PATH NAMES usb-1.0 REQUIRED)
+  endif()
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${_dvb_libusb_old_suffixes})
+  # Swap the imported target's link to the explicit .a path. Framework
+  # refs added above via target_link_options stay in place.
+  set_target_properties(PkgConfig::libusb PROPERTIES
+    INTERFACE_LINK_LIBRARIES "${DVB_LIBUSB_LIBUSB_STATIC_PATH}")
+  message(STATUS "dvb_libusb: forcing libusb static link via ${DVB_LIBUSB_LIBUSB_STATIC_PATH}")
+endif()
 
 # ---- Lifted-source presence check ------------------------------------- *
 #
