@@ -10,6 +10,10 @@
  * not bytes-copied) so we provide a small wrapper. Returns the number
  * of bytes copied, or -E2BIG on truncation, matching the kernel. */
 #include <stddef.h>
+/* libc errno.h directly — on Linux, the system's <linux/errno.h> is
+ * the kernel UAPI header which doesn't include the libc errno values
+ * E2BIG/EIO/etc.; pulling errno.h first guarantees those macros. */
+#include <errno.h>
 #include <linux/errno.h>
 
 static inline ssize_t strscpy(char *dst, const char *src, size_t size) {

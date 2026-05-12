@@ -27,6 +27,7 @@
 #include <linux/err.h>
 #include <linux/types.h>
 
+#include <errno.h>
 #include <string.h>
 
 struct regmap {

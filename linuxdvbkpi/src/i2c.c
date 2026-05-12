@@ -27,6 +27,7 @@
 #include <linux/slab.h>
 #include <linux/errno.h>
 
+#include <errno.h>
 #include <pthread.h>
 #include <string.h>
 #include <stdlib.h>
