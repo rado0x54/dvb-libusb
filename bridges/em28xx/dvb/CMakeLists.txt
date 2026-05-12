@@ -3,9 +3,7 @@
 # i2c_new_client_device chip-attach flow, and the per-frontend
 # usbq_stream + tune/read/status vtable.
 #
-# License: GPL-2.0-or-later for src/boards.c (transcribes upstream
-# em28xx-dvb attach recipes); MIT for src/dvb_em28xx.c + headers
-# (engine lifecycle, our code).
+# License: GPL-2.0-or-later.
 
 # OBJECT lib — the board table is only reached via discover_all
 # walking the symbol map of the final shared lib. Plain static

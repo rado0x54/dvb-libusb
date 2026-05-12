@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * dvb_pid_dump — bridge-agnostic TS dumper for any supported DVB
  * USB device. Scans the bus, opens the device at index 0 (or `idx`

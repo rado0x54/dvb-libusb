@@ -8,8 +8,7 @@
  * (mirrored locally for porting, not committed to this repo).
  *
  * License: GPL-2.0-or-later. The upstream driver is GPL-2.0+; the
- * userspace port preserves that. (The usbq wrapper this layer sits
- * on top of is independently MIT — see usbq/include/usbq/usbq.h.)
+ * userspace port preserves that.
  *
  * Authors of the upstream driver this code is derived from:
  *   Ludovico Cavedon <cavedon@sssup.it>

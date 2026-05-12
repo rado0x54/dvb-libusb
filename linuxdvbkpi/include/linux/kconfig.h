@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /* Kernel `<linux/kconfig.h>` exposes IS_ENABLED(CONFIG_FOO) — a
  * compile-time check on a CONFIG_ symbol's value. We expose the same
  * macro shape; chip drivers use it for optional code paths (e.g.

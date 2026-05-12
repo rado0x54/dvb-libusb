@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * dvb_em28xx — bridge lifecycle for em28xx-based DVB USB devices.
  *

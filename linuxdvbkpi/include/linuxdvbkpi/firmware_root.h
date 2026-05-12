@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * Tiny API for upper-layer code to point the polyfill's
  * request_firmware() at a specific directory at process startup.

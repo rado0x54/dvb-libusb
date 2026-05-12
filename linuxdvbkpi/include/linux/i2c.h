@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * i2c subsystem polyfill — ABI-compatible with the kernel's
  * <linux/i2c.h> for the subset chip drivers consume:

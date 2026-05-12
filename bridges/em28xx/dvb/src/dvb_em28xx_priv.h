@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * Internal types shared between dvb_em28xx.c (bridge lifecycle)
  * and boards.c (per-board chip attach). Not part of the public API.

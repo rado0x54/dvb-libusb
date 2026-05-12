@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * dvb_devices — list DVB hardware that's plugged in (default), or
  * the build's full board table (--supported).

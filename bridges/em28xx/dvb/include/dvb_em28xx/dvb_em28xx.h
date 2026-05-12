@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * dvb_em28xx — bridge-generic engine for all DVB USB devices
  * built on the Empia em28xx USB→I²C/TS bridge family.

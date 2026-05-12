@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: MIT */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * Userspace-side mirror of <media/dvb_frontend.h>, narrowed to the
  * subset chip drivers (demod + tuner) actually consume.
