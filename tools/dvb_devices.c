@@ -21,6 +21,7 @@
 #include "dvb_handle/dvb_handle.h"
 #include "dvb_em28xx/dvb_em28xx.h"
 #include "dvb_dib0700/dvb_dib0700.h"
+#include "dvb_dvbsky/dvb_dvbsky.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,11 +31,13 @@
 
 static int gather_supported(const dvb_supported_board_t *out[], int max) {
     int n = 0;
-    int em_n = 0, dib_n = 0;
+    int em_n = 0, dib_n = 0, sky_n = 0;
     const dvb_supported_board_t *em  = dvb_em28xx_supported_boards (&em_n);
     const dvb_supported_board_t *dib = dvb_dib0700_supported_boards(&dib_n);
+    const dvb_supported_board_t *sky = dvb_dvbsky_supported_boards (&sky_n);
     for (int i = 0; i < em_n  && n < max; i++) out[n++] = &em [i];
     for (int i = 0; i < dib_n && n < max; i++) out[n++] = &dib[i];
+    for (int i = 0; i < sky_n && n < max; i++) out[n++] = &sky[i];
     return n;
 }
 
@@ -42,6 +45,7 @@ static int gather_present(dvb_present_board_t *out, int max) {
     int n = 0;
     n += dvb_em28xx_scan_present (&out[n], max - n);
     n += dvb_dib0700_scan_present(&out[n], max - n);
+    n += dvb_dvbsky_scan_present (&out[n], max - n);
     return n;
 }
 

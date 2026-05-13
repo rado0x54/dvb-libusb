@@ -33,12 +33,22 @@ lives separately and consumes `libdvb_libusb` like any other client.
 | Hauppauge WinTV-dualHD (DVB)            | `2040:0265`          | 2         | DVB-T, DVB-T2, DVB-C    | ✅ (incl. retune, multi-session) |
 | Hauppauge WinTV-dualHD 01595 ATSC/QAM   | `2040:026d` `826d`–`8271` | 2  | ATSC, DVB-C ANNEX B     | ✅ (compile + plugin-load only — no live ATSC mux at hand) |
 | Microsoft Xbox One Digital TV Tuner     | `045e:02d5`          | 1         | DVB-T, DVB-T2, DVB-C    | ✅ (incl. retune, multi-session) |
+| MyGica T230                             | `0572:c688`          | 1         | DVB-T, DVB-T2, DVB-C    | ⚠️ untested (same code path as T230C) |
+| MyGica T230C / Geniatech EyeTV Stick    | `0572:c689`          | 1         | DVB-T, DVB-T2, DVB-C    | ✅ (DVB-C tune+lock+TS dump on a Munich mux at 31.75 dB CNR, 1 bad-sync packet / 10 s — both PSI/SI and Das Erste HD service PIDs cleanly framed) |
+| MyGica T230C2                           | `0572:c68a`          | 1         | DVB-T, DVB-T2, DVB-C    | ⚠️ untested (same code path as T230C plus `TS_CLK_MANUAL`) |
 
-These three are the only boards currently in the engine board tables.
-Everything else — including other em28xx-based DVB devices and other
-dib0700 boards — should be a straightforward addition (one row + one
-attach function per board), but is **untested**. Contributions
-welcome; bring hardware.
+The WinTV-dualHD variants, Xbox One Tuner, and Geniatech EyeTV
+Stick (which is electrically a MyGica T230C) are the hardware
+this project has been validated against. The two other T230 rows
+(plain T230 and T230C2) share most of the same bring-up + chip
+attach code, but I do not have those sticks in hand to confirm
+end-to-end. Reports welcome.
+
+Adding a new board to an **existing** bridge family (em28xx,
+dib0700, dvbsky) is a board-table row plus a small attach
+function — see `bridges/*/dvb/src/boards.c`. Adding a new
+bridge family is a larger lift; `bridges/dvbsky/` is a recent
+example of what it takes.
 
 Run `tools/dvb_devices` for the live list:
 
@@ -54,8 +64,9 @@ entries with different bus/dev addresses.
 
 ## Building
 
-The lifted upstream chip drivers (`si2168`, `si2157`, `mn88472`,
-`tda18250`, `lgdt3306a`) aren't vendored. They're pulled on demand
+The lifted upstream chip drivers (`si2168`, `si2157` — which also
+drives Si2141 on T230C / EyeTV Stick — `mn88472`, `tda18250`,
+`lgdt3306a`) aren't vendored. They're pulled on demand
 from `torvalds/linux` at a pinned tag (see
 `scripts/lifted-manifest.txt`) into a gitignored `chips/lifted/` directory.
 Run the fetch script once before configuring CMake:
@@ -109,6 +120,9 @@ here:
 
 - WinTV-dualHD (DVB): `dvb-demod-si2168-b40-01.fw`
 - Xbox One Tuner: `dvb-usb-dib0700-1.20.fw`, `dvb-demod-mn88472-02.fw`
+- MyGica T230 / T230C / T230C2 / Geniatech EyeTV Stick:
+  `dvb-demod-si2168-b40-01.fw` (T230C/T230C2 also need
+  `dvb-tuner-si2141-a10-01.fw` for the Si2141 tuner)
 
 Get them from the [linux-firmware](https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/tree/)
 tree (or your distro's `firmware-linux-nonfree` equivalent).
@@ -152,6 +166,7 @@ include the per-bridge DVB engine headers:
 #include <dvb_handle/dvb_handle.h>
 #include <dvb_em28xx/dvb_em28xx.h>
 #include <dvb_dib0700/dvb_dib0700.h>
+#include <dvb_dvbsky/dvb_dvbsky.h>
 #include <linuxdvbkpi/firmware_root.h>
 
 linuxdvbkpi_set_firmware_root("/path/to/firmware");
@@ -160,6 +175,7 @@ dvb_frontend_handle_t *handles[8] = {0};
 int n = 0;
 n += dvb_em28xx_discover_all (&handles[n], 8 - n);
 n += dvb_dib0700_discover_all(&handles[n], 8 - n);
+n += dvb_dvbsky_discover_all (&handles[n], 8 - n);
 
 for (int i = 0; i < n; i++) {
     dvb_frontend_handle_t *fe = handles[i];
@@ -177,6 +193,7 @@ for (int i = 0; i < n; i++) {
     /* ... */
 }
 
+dvb_dvbsky_shutdown();
 dvb_dib0700_shutdown();
 dvb_em28xx_shutdown();
 ```
@@ -217,26 +234,28 @@ when consumed via `add_subdirectory`; flip with
 │ tools/  +  third-party consumers (your SAT>IP plugin, app, …)   │
 └─────────────────────────────┬───────────────────────────────────┘
                               │ libdvb_libusb public API
-                              │ (dvb_em28xx_* / dvb_dib0700_*)
+                              │ (dvb_em28xx_* / dvb_dib0700_* / dvb_dvbsky_*)
 ┌─────────────────────────────┴───────────────────────────────────┐
-│ bridges/em28xx/dvb        │  bridges/dib0700/dvb                 │
-│ (DVB engine: board table, │  (DVB engine: board table,           │
-│  per-frontend lifecycle,  │   per-frontend lifecycle, vtable)    │
-│  vtable)                  │                                       │
-│  · WinTV-dualHD DVB       │  · Xbox One Tuner                    │
-│  · WinTV-dualHD ATSC      │                                       │
-└──────┬───────────────────┴────────┬─────────────────────────────┘
-       │ em28xx_* (protocol)         │ dib0700_* (protocol)
-┌──────┴────────────────┐  ┌─────────┴───────────┐
-│ bridges/em28xx/bridge │  │ bridges/dib0700/    │  ← manual ports of
-│ (USB protocol: vendor │  │   bridge            │    the bridge protocol
-│  control, i²c, GPIO,  │  │ (USB protocol)      │    (USB control + i²c)
-│  TS-bus enable)       │  │                     │
-└──────┬────────────────┘  └─────────┬───────────┘
-       │                              │
-       └─── via i²c → ────────────────┴──→  chips/  (lifted upstream:
-                                              si2168, si2157, lgdt3306a,
-                                              mn88472, tda18250)
+│ bridges/em28xx/dvb      │ bridges/dib0700/dvb │ bridges/dvbsky/dvb │
+│ (DVB engine: board      │ (DVB engine)         │ (DVB engine)       │
+│  table, per-frontend    │  · Xbox One Tuner    │  · MyGica T230,    │
+│  lifecycle, vtable)     │                       │    T230C, T230C2   │
+│  · WinTV-dualHD DVB     │                       │  · Geniatech EyeTV │
+│  · WinTV-dualHD ATSC    │                       │                     │
+└──────┬──────────────────┴──────┬─────────────┴──────┬───────────┘
+       │ em28xx_* (protocol)      │ dib0700_*           │ dvbsky_*
+┌──────┴──────────────┐  ┌────────┴─────────┐  ┌────────┴──────────┐
+│ bridges/em28xx/     │  │ bridges/dib0700/ │  │ bridges/dvbsky/    │  ← manual ports of
+│   bridge            │  │   bridge         │  │   bridge           │    the bridge protocols
+│ (USB protocol)      │  │ (USB protocol)   │  │ (USB protocol:     │    (USB ctrl/bulk + i²c)
+│                     │  │                  │  │  bulk-EP framed    │
+│                     │  │                  │  │  cmds, i²c, GPIO,  │
+│                     │  │                  │  │  TS-bus enable)    │
+└──────┬──────────────┘  └────────┬─────────┘  └────────┬───────────┘
+       │                          │                     │
+       └── via i²c → ─────────────┴─────────────────────┴──→  chips/  (lifted upstream:
+                                                                 si2168, si2157, lgdt3306a,
+                                                                 mn88472, tda18250)
 
    ┌──────────────────────────────────────────────────────────────┐
    │ linuxdvbkpi — Linux kernel-API polyfill                       │

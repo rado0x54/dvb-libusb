@@ -3,16 +3,18 @@
  * dvb_pid_dump — bridge-agnostic TS dumper for any supported DVB
  * USB device. Scans the bus, opens the device at index 0 (or `idx`
  * if given), tunes, and dumps 188-aligned TS packets — optionally
- * filtered to one PID — to stdout.
+ * filtered to a set of PIDs — to stdout.
  *
  * Standalone tool — no SAT>IP / streaming-server dependency.
  *
  *   usage:
  *     dvb_pid_dump --list
- *     dvb_pid_dump <delsys> <freq_hz> <bw_hz> [pid|-1] [duration_s] [idx]
+ *     dvb_pid_dump <delsys> <freq_hz> <bw_hz> [pids] [duration_s] [idx]
  *
  *     delsys     : dvbt | dvbt2 | dvbc | atsc
- *     pid        : 13-bit TS PID to filter on. -1 = pass all. Default 0.
+ *     pids       : -1 = pass all (default 0). A single PID, or a
+ *                  comma-separated list ("0,17,18,5100,5101"), keeps
+ *                  only matching packets.
  *     duration_s : default 5.
  *     idx        : 0-based index into the discovered-devices list.
  *                  Default 0 (first match). Run with --list to see all.
@@ -38,6 +40,7 @@
 #include "dvb_handle/dvb_handle.h"
 #include "dvb_em28xx/dvb_em28xx.h"
 #include "dvb_dib0700/dvb_dib0700.h"
+#include "dvb_dvbsky/dvb_dvbsky.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -76,12 +79,51 @@ static uint16_t ts_pid(const uint8_t *pkt) {
     return (uint16_t)(((pkt[1] & 0x1f) << 8) | pkt[2]);
 }
 
+/* Up to 32 PIDs in a single --pids list — covers a typical service
+ * (PAT/CAT/PMT + video + audio + subtitle + a few extras). */
+#define MAX_FILTER_PIDS 32
+
+typedef struct pid_filter {
+    int      pass_all;        /* -1 short-form */
+    int      n;
+    uint16_t pids[MAX_FILTER_PIDS];
+} pid_filter_t;
+
+static int parse_pid_filter(const char *s, pid_filter_t *out) {
+    memset(out, 0, sizeof(*out));
+    if (!s || !*s) { out->pass_all = 0; out->n = 1; out->pids[0] = 0; return 0; }
+    /* "-1" → pass everything. */
+    if (!strcmp(s, "-1")) { out->pass_all = 1; return 0; }
+
+    /* Comma-separated list, optionally just a single integer. */
+    const char *p = s;
+    while (*p) {
+        char *end = NULL;
+        long v = strtol(p, &end, 0);
+        if (end == p) return -1;
+        if (v < 0 || v > 0x1fff) return -1;
+        if (out->n >= MAX_FILTER_PIDS) return -1;
+        out->pids[out->n++] = (uint16_t)v;
+        p = end;
+        if (*p == ',') p++;
+        else if (*p)  return -1;
+    }
+    return out->n > 0 ? 0 : -1;
+}
+
+static int pid_filter_match(const pid_filter_t *f, uint16_t pid) {
+    if (f->pass_all) return 1;
+    for (int i = 0; i < f->n; i++) if (f->pids[i] == pid) return 1;
+    return 0;
+}
+
 /* Discover everything plugged in across both engines and append
  * to handles[]. Returns total handles published. */
 static int discover_all(dvb_frontend_handle_t **handles, int max) {
     int n = 0;
     n += dvb_em28xx_discover_all (&handles[n], max - n);
     n += dvb_dib0700_discover_all(&handles[n], max - n);
+    n += dvb_dvbsky_discover_all (&handles[n], max - n);
     return n;
 }
 
@@ -94,6 +136,7 @@ static void list_handles(dvb_frontend_handle_t **handles, int n) {
 
 static void shutdown_all(void) {
     /* Mirror the plugin's reverse-of-discovery shutdown order. */
+    dvb_dvbsky_shutdown();
     dvb_dib0700_shutdown();
     dvb_em28xx_shutdown();
 }
@@ -103,7 +146,10 @@ static int usage(const char *argv0) {
             "usage:\n"
             "  %s --list\n"
             "  %s <dvbt|dvbt2|dvbc|atsc> <freq_hz> <bw_hz> "
-            "[pid|-1] [duration_s] [idx]\n"
+            "[pids] [duration_s] [idx]\n"
+            "\n"
+            "  pids: -1 = pass all (default 0). Single PID, or a\n"
+            "        comma-separated list like \"0,17,18,5100,5101\".\n"
             "\n"
             "Firmware: $FIRMWARE_DIR if set, else /usr/local/lib/firmware,\n"
             "          /usr/lib/firmware, /lib/firmware (kernel default).\n",
@@ -138,7 +184,11 @@ int main(int argc, char *argv[]) {
     }
     uint32_t freq_hz    = (uint32_t)strtoul(argv[2], NULL, 0);
     uint32_t bw_hz      = (uint32_t)strtoul(argv[3], NULL, 0);
-    int      filter_pid = (argc >= 5) ? atoi(argv[4]) : 0;
+    pid_filter_t filter;
+    if (parse_pid_filter(argc >= 5 ? argv[4] : "0", &filter) < 0) {
+        fprintf(stderr, "bad pids argument: '%s'\n", argv[4]);
+        return 2;
+    }
     int      duration_s = (argc >= 6) ? atoi(argv[5]) : 5;
     int      idx        = (argc >= 7) ? atoi(argv[6]) : 0;
 
@@ -273,7 +323,7 @@ int main(int argc, char *argv[]) {
             }
             uint16_t pid = ts_pid(pkt);
             total_packets++;
-            if (filter_pid < 0 || (int)pid == filter_pid) {
+            if (pid_filter_match(&filter, pid)) {
                 matched_packets++;
                 if (write(STDOUT_FILENO, pkt, TS_PACKET) != TS_PACKET) {
                     fprintf(stderr, "write to stdout failed: %d\n", errno);
@@ -291,11 +341,23 @@ int main(int argc, char *argv[]) {
 stream_done:
     free(stage);
 
+    char filter_repr[160] = {0};
+    if (filter.pass_all) {
+        snprintf(filter_repr, sizeof(filter_repr), "all");
+    } else {
+        size_t off = 0;
+        for (int i = 0; i < filter.n; i++) {
+            int wrote = snprintf(filter_repr + off, sizeof(filter_repr) - off,
+                                 "%s%u", i ? "," : "", (unsigned)filter.pids[i]);
+            if (wrote < 0 || (size_t)wrote >= sizeof(filter_repr) - off) break;
+            off += (size_t)wrote;
+        }
+    }
     fprintf(stderr,
             "summary: total=%" PRIu64 " matched=%" PRIu64 " bad_sync=%" PRIu64
-            " (filter=%d, %ds)\n",
+            " (filter=%s, %ds)\n",
             total_packets, matched_packets, bad_sync_packets,
-            filter_pid, duration_s);
+            filter_repr, duration_s);
     success = (matched_packets > 0 &&
                bad_sync_packets * 100 < total_packets);
 
