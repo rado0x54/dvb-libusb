@@ -9,3 +9,4 @@
 
 add_subdirectory(em28xx)
 add_subdirectory(dib0700)
+add_subdirectory(dvbsky)
