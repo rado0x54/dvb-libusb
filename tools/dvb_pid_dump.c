@@ -38,6 +38,7 @@
 #include "dvb_handle/dvb_handle.h"
 #include "dvb_em28xx/dvb_em28xx.h"
 #include "dvb_dib0700/dvb_dib0700.h"
+#include "dvb_dvbsky/dvb_dvbsky.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -82,6 +83,7 @@ static int discover_all(dvb_frontend_handle_t **handles, int max) {
     int n = 0;
     n += dvb_em28xx_discover_all (&handles[n], max - n);
     n += dvb_dib0700_discover_all(&handles[n], max - n);
+    n += dvb_dvbsky_discover_all (&handles[n], max - n);
     return n;
 }
 
@@ -94,6 +96,7 @@ static void list_handles(dvb_frontend_handle_t **handles, int n) {
 
 static void shutdown_all(void) {
     /* Mirror the plugin's reverse-of-discovery shutdown order. */
+    dvb_dvbsky_shutdown();
     dvb_dib0700_shutdown();
     dvb_em28xx_shutdown();
 }

@@ -191,9 +191,11 @@ target_sources(dvb_libusb PRIVATE
   $<TARGET_OBJECTS:usbq>
   $<TARGET_OBJECTS:em28xx>
   $<TARGET_OBJECTS:dib0700>
+  $<TARGET_OBJECTS:dvbsky>
   $<TARGET_OBJECTS:chips>
   $<TARGET_OBJECTS:dvb_em28xx>
   $<TARGET_OBJECTS:dvb_dib0700>
+  $<TARGET_OBJECTS:dvb_dvbsky>
 )
 
 # Direct deps of the folded objects: libusb-1.0 is referenced by
@@ -260,6 +262,7 @@ endif()
 target_include_directories(dvb_libusb INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/bridges/em28xx/dvb/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/bridges/dib0700/dvb/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/bridges/dvbsky/dvb/include>
   $<INSTALL_INTERFACE:include>
 )
 
@@ -304,6 +307,7 @@ if(DVB_LIBUSB_INSTALL)
   install(DIRECTORY linuxdvbkpi/api/                DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
   install(DIRECTORY bridges/em28xx/dvb/include/     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
   install(DIRECTORY bridges/dib0700/dvb/include/    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  install(DIRECTORY bridges/dvbsky/dvb/include/     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
   # Generate dvb_libusbConfig.cmake (resolves transitive deps like
   # libusb-1.0 via pkg-config) and dvb_libusbConfigVersion.cmake
