@@ -25,19 +25,50 @@
 
 #include <libusb.h>
 
-/* ---- library lifecycle ------------------------------------------- */
+/* ---- library lifecycle ------------------------------------------- *
+ *
+ * usbq_init / usbq_shutdown are refcounted because multiple DVB
+ * engines (em28xx, dib0700, …) each call them independently as part
+ * of their own discover/shutdown lifecycle. Without the refcount,
+ * the first engine to tear down would call libusb_exit() while
+ * other engines still hold open device handles — libusb's darwin
+ * backend then logs "device still referenced at libusb_exit" and
+ * asserts inside its pthread_mutex_destroy() pass.
+ *
+ * Mutex around the counter so multi-threaded consumers (engine
+ * threads, status pollers) don't race on the 0↔1 transitions that
+ * call into libusb_init/exit. */
 
 static libusb_context *g_ctx;
+static int             g_init_refcount;
+static pthread_mutex_t g_init_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int usbq_init(void) {
-    if (g_ctx) return 0;
-    return libusb_init(&g_ctx);
+    pthread_mutex_lock(&g_init_lock);
+    int rc = 0;
+    if (g_init_refcount == 0) {
+        rc = libusb_init(&g_ctx);
+        if (rc != 0) {
+            pthread_mutex_unlock(&g_init_lock);
+            return rc;
+        }
+    }
+    g_init_refcount++;
+    pthread_mutex_unlock(&g_init_lock);
+    return 0;
 }
 
 void usbq_shutdown(void) {
-    if (!g_ctx) return;
-    libusb_exit(g_ctx);
-    g_ctx = NULL;
+    pthread_mutex_lock(&g_init_lock);
+    if (g_init_refcount == 0) {
+        pthread_mutex_unlock(&g_init_lock);
+        return;
+    }
+    if (--g_init_refcount == 0 && g_ctx) {
+        libusb_exit(g_ctx);
+        g_ctx = NULL;
+    }
+    pthread_mutex_unlock(&g_init_lock);
 }
 
 /* ---- per-device state -------------------------------------------- */
