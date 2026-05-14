@@ -101,7 +101,22 @@ static int print_supported(void) {
 /* ---- --watch -------------------------------------------------------- */
 
 static volatile sig_atomic_t g_watch_stop;
-static void on_sigint(int sig) { (void)sig; g_watch_stop = 1; }
+static volatile sig_atomic_t g_watch_wake_fd = -1;
+
+/* Self-pipe trick: the handler writes one byte to the same wake
+ * pipe the event loop poll()s on, so a signal arriving between the
+ * while-check and poll() still wakes the loop. write(2) is
+ * async-signal-safe per POSIX. */
+static void on_sigint(int sig) {
+    (void)sig;
+    g_watch_stop = 1;
+    int fd = (int)g_watch_wake_fd;
+    if (fd >= 0) {
+        const char c = 0;
+        ssize_t w = write(fd, &c, 1);
+        (void)w;
+    }
+}
 
 /* Resolve an incoming hotplug event back to a board name + bridge
  * string by walking the same supported-boards aggregate the default
@@ -156,6 +171,7 @@ static int watch_mode(void) {
     fcntl(pipefd[0], F_SETFL, fcntl(pipefd[0], F_GETFL) | O_NONBLOCK);
     fcntl(pipefd[1], F_SETFL, fcntl(pipefd[1], F_GETFL) | O_NONBLOCK);
 
+    g_watch_wake_fd = pipefd[1];
     signal(SIGINT,  on_sigint);
     signal(SIGTERM, on_sigint);
 
@@ -191,6 +207,7 @@ static int watch_mode(void) {
 
     printf("\nStopping watch.\n");
     dvb_hotplug_shutdown();
+    g_watch_wake_fd = -1;
     close(pipefd[0]);
     close(pipefd[1]);
     return 0;
