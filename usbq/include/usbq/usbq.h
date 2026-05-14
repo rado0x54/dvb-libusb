@@ -30,6 +30,27 @@ typedef struct usbq_stream usbq_stream_t;
 int  usbq_init(void);
 void usbq_shutdown(void);
 
+/* Access usbq's singleton libusb_context. Returns NULL before
+ * usbq_init() and after the final usbq_shutdown(). Intended for the
+ * hotplug module (or any consumer that needs to register libusb
+ * callbacks on the same context the streams + open calls run on).
+ *
+ * Forward-declared so this header doesn't pull in <libusb.h>; the
+ * caller includes that itself. */
+struct libusb_context;
+struct libusb_context *usbq_libusb_context(void);
+
+/* Bump / drop the refcount on usbq's singleton libusb-events thread.
+ * That thread normally lives only while at least one usbq_stream_t
+ * is open. Components that need libusb callbacks delivered when no
+ * stream is open (notably the hotplug module — a plugged-but-idle
+ * device produces no URB activity) call usbq_evt_acquire to keep
+ * the thread alive, and usbq_evt_release on teardown.
+ *
+ * Returns 0 on success, libusb-style negative on thread-create failure. */
+int  usbq_evt_acquire(void);
+void usbq_evt_release(void);
+
 /* ---- Per-device API ---------------------------------------------- *
  *
  * `vidpid` is "VVVV:PPPP" hex (e.g. "2040:0265"). usbq_open returns
@@ -38,6 +59,23 @@ void usbq_shutdown(void);
 usbq_dev_t *usbq_open  (const char *vidpid);
 void        usbq_close (usbq_dev_t *dev);
 int         usbq_reset (usbq_dev_t *dev);
+
+/* Open the specific device at USB bus_number:device_address (as
+ * reported by libusb_get_bus_number / libusb_get_device_address).
+ * Differs from usbq_open by VID:PID — that returns the first
+ * matching device, which is the wrong physical device when two
+ * boards with the same VID:PID are plugged in. Hotplug callbacks
+ * provide bus:devaddr for exactly this disambiguation.
+ * Returns NULL if no device is at the given address, or if open
+ * fails. Caller should subsequently consult usbq_get_vidpid() to
+ * decide whether the device matches its supported-board table. */
+usbq_dev_t *usbq_open_by_addr(uint8_t bus_number, uint8_t device_address);
+
+/* Read the cached USB VID:PID of an opened device, captured at
+ * usbq_open / usbq_open_by_addr time. Useful after open-by-address,
+ * when the caller looks up its board record by VID:PID. */
+int         usbq_get_vidpid(usbq_dev_t *dev, uint16_t *vid_out,
+                            uint16_t *pid_out);
 
 /* Enumerate plugged-in USB devices matching `vidpid` ("VVVV:PPPP"
  * hex) without opening any of them. Does not claim, does not bring
@@ -123,8 +161,12 @@ usbq_stream_t *usbq_stream_open(usbq_dev_t *dev, const usbq_stream_cfg_t *cfg);
 void           usbq_stream_close(usbq_stream_t *s);
 
 /* Blocking read up to `cap` bytes from the stream's ring. Returns
- * bytes copied; 0 on timeout (not an error); negative on hard error.
- * Pass timeout_ms = 0 for non-blocking. */
+ * bytes copied; 0 on timeout / transient gap; negative on hard error.
+ * In particular, returns -ENODEV when the stream is stopping (device
+ * unplugged or submission failure) and the ring has been fully
+ * drained — that's the signal callers use to tear down a dead device,
+ * versus 0 which can still be transient. Pass timeout_ms = 0 for
+ * non-blocking. */
 int            usbq_stream_read(usbq_stream_t *s, void *buf, size_t cap,
                                 uint32_t timeout_ms);
 

@@ -162,6 +162,7 @@ add_subdirectory(linuxdvbkpi)     # kernel-API polyfill
 add_subdirectory(usbq)            # libusb wrapper
 add_subdirectory(chips)           # all 5 lifted upstream chip drivers
 add_subdirectory(bridges)         # bridge protocol + DVB engine, per family
+add_subdirectory(dvb_hotplug)     # libusb hotplug surface (post-bridges; reads their board tables)
 
 # ---- Top-level library ------------------------------------------------ *
 #
@@ -196,6 +197,7 @@ target_sources(dvb_libusb PRIVATE
   $<TARGET_OBJECTS:dvb_em28xx>
   $<TARGET_OBJECTS:dvb_dib0700>
   $<TARGET_OBJECTS:dvb_dvbsky>
+  $<TARGET_OBJECTS:dvb_hotplug>
 )
 
 # Direct deps of the folded objects: libusb-1.0 is referenced by
@@ -263,6 +265,7 @@ target_include_directories(dvb_libusb INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/bridges/em28xx/dvb/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/bridges/dib0700/dvb/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/bridges/dvbsky/dvb/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/dvb_hotplug/include>
   $<INSTALL_INTERFACE:include>
 )
 
@@ -308,6 +311,7 @@ if(DVB_LIBUSB_INSTALL)
   install(DIRECTORY bridges/em28xx/dvb/include/     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
   install(DIRECTORY bridges/dib0700/dvb/include/    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
   install(DIRECTORY bridges/dvbsky/dvb/include/     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+  install(DIRECTORY dvb_hotplug/include/            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
   # Generate dvb_libusbConfig.cmake (resolves transitive deps like
   # libusb-1.0 via pkg-config) and dvb_libusbConfigVersion.cmake

@@ -328,28 +328,25 @@ static void frontend_teardown(dvb_em28xx_frontend_t *fe) {
     fe->handle.display_name = NULL;
 }
 
-/* Open one device matching `board`, fill its frontends, and chain
- * onto g_devices. Returns the number of frontends published, or 0
- * on any bring-up failure (cleans up everything it allocated). */
-static int open_device(const em28xx_board_t *board, const char *vidpid,
-                       dvb_frontend_handle_t **out_handles, int max_out) {
+/* Take ownership of an already-opened, kernel-driver-detached,
+ * interface-0-claimed usbq_dev_t, bring up the board's frontends,
+ * and chain onto g_devices. Returns the number of frontends
+ * published, or 0 on any bring-up failure (releases/closes the
+ * passed-in `usb` and cleans up everything else it allocated). */
+static int open_device_from_usb(const em28xx_board_t *board, usbq_dev_t *usb,
+                                dvb_frontend_handle_t **out_handles, int max_out) {
     if (board->num_frontends > (int)(sizeof(((dvb_em28xx_dev_t *)0)->frontends)
                                      / sizeof(((dvb_em28xx_dev_t *)0)->frontends[0]))) {
         ELOG("%s: num_frontends=%d exceeds engine capacity",
              board->name, board->num_frontends);
+        usbq_release_interface(usb, 0);
+        usbq_close(usb);
         return 0;
     }
     if (max_out < board->num_frontends) {
         ELOG("%s: caller has %d slot(s), need %d — skipping",
              board->name, max_out, board->num_frontends);
-        return 0;
-    }
-
-    usbq_dev_t *usb = usbq_open(vidpid);
-    if (!usb) return 0;
-    (void)usbq_disconnect_kernel_driver(usb);
-    if (usbq_claim_interface(usb, 0) < 0) {
-        ELOG("%s: usbq_claim_interface(0) failed", board->name);
+        usbq_release_interface(usb, 0);
         usbq_close(usb);
         return 0;
     }
@@ -412,6 +409,21 @@ fail:
     return 0;
 }
 
+/* Wrapper for the VID:PID-string entry point: open the first device
+ * matching, then delegate to open_device_from_usb. */
+static int open_device(const em28xx_board_t *board, const char *vidpid,
+                       dvb_frontend_handle_t **out_handles, int max_out) {
+    usbq_dev_t *usb = usbq_open(vidpid);
+    if (!usb) return 0;
+    (void)usbq_disconnect_kernel_driver(usb);
+    if (usbq_claim_interface(usb, 0) < 0) {
+        ELOG("%s: usbq_claim_interface(0) failed", board->name);
+        usbq_close(usb);
+        return 0;
+    }
+    return open_device_from_usb(board, usb, out_handles, max_out);
+}
+
 /* ---- Public API -------------------------------------------------- */
 
 int dvb_em28xx_open(const char *vidpid,
@@ -427,6 +439,42 @@ int dvb_em28xx_open(const char *vidpid,
         return 0;
     }
     return open_device(board, vidpid, handles, max);
+}
+
+int dvb_em28xx_open_by_addr(uint8_t bus_number, uint8_t device_address,
+                            dvb_frontend_handle_t **handles, int max) {
+    if (!handles || max <= 0) return 0;
+    if (!g_usbq_inited) {
+        if (usbq_init() != 0) return 0;
+        g_usbq_inited = 1;
+    }
+
+    usbq_dev_t *usb = usbq_open_by_addr(bus_number, device_address);
+    if (!usb) return 0;
+
+    uint16_t vid = 0, pid = 0;
+    if (usbq_get_vidpid(usb, &vid, &pid) != 0) {
+        usbq_close(usb);
+        return 0;
+    }
+    char vidpid[16];
+    snprintf(vidpid, sizeof(vidpid), "%04x:%04x", vid, pid);
+
+    const em28xx_board_t *board = find_board_by_vidpid(vidpid);
+    if (!board) {
+        ELOG("no em28xx board record for %s @ bus %u devaddr %u",
+             vidpid, (unsigned)bus_number, (unsigned)device_address);
+        usbq_close(usb);
+        return 0;
+    }
+
+    (void)usbq_disconnect_kernel_driver(usb);
+    if (usbq_claim_interface(usb, 0) < 0) {
+        ELOG("%s: usbq_claim_interface(0) failed", board->name);
+        usbq_close(usb);
+        return 0;
+    }
+    return open_device_from_usb(board, usb, handles, max);
 }
 
 int dvb_em28xx_discover_all(dvb_frontend_handle_t **handles, int max) {

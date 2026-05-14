@@ -94,15 +94,9 @@ static int parse_vidpid(const char *path, uint16_t *vid_out, uint16_t *pid_out) 
     return 0;
 }
 
-usbq_dev_t *usbq_open(const char *vidpid) {
-    uint16_t vid, pid;
-    if (parse_vidpid(vidpid, &vid, &pid) != 0) return NULL;
-    if (usbq_init() != 0) return NULL;
-
-    libusb_device_handle *h =
-        libusb_open_device_with_vid_pid(g_ctx, vid, pid);
-    if (!h) return NULL;
-
+/* Wrap an opened libusb_device_handle into a usbq_dev_t. Takes
+ * ownership of `h` — closes it on failure. */
+static usbq_dev_t *usbq_dev_wrap(libusb_device_handle *h) {
     usbq_dev_t *d = calloc(1, sizeof(*d));
     if (!d) { libusb_close(h); return NULL; }
     d->handle = h;
@@ -115,6 +109,43 @@ usbq_dev_t *usbq_open(const char *vidpid) {
     int rc = libusb_set_auto_detach_kernel_driver(h, 1);
     d->auto_detach = (rc == 0);
     return d;
+}
+
+usbq_dev_t *usbq_open(const char *vidpid) {
+    uint16_t vid, pid;
+    if (parse_vidpid(vidpid, &vid, &pid) != 0) return NULL;
+    if (usbq_init() != 0) return NULL;
+
+    libusb_device_handle *h =
+        libusb_open_device_with_vid_pid(g_ctx, vid, pid);
+    if (!h) return NULL;
+    return usbq_dev_wrap(h);
+}
+
+usbq_dev_t *usbq_open_by_addr(uint8_t bus, uint8_t devaddr) {
+    if (usbq_init() != 0) return NULL;
+
+    libusb_device **list;
+    ssize_t n = libusb_get_device_list(g_ctx, &list);
+    if (n < 0) return NULL;
+
+    libusb_device_handle *h = NULL;
+    for (ssize_t i = 0; i < n; i++) {
+        if (libusb_get_bus_number    (list[i]) != bus    ) continue;
+        if (libusb_get_device_address(list[i]) != devaddr) continue;
+        if (libusb_open(list[i], &h) != 0) h = NULL;
+        break;
+    }
+    libusb_free_device_list(list, 1);
+    if (!h) return NULL;
+    return usbq_dev_wrap(h);
+}
+
+int usbq_get_vidpid(usbq_dev_t *d, uint16_t *vid_out, uint16_t *pid_out) {
+    if (!d) return -EINVAL;
+    if (vid_out) *vid_out = d->desc.idVendor;
+    if (pid_out) *pid_out = d->desc.idProduct;
+    return 0;
 }
 
 void usbq_close(usbq_dev_t *d) {
@@ -274,7 +305,11 @@ static void *evt_thread_main(void *unused) {
     return NULL;
 }
 
-static int evt_acquire(void) {
+struct libusb_context *usbq_libusb_context(void) {
+    return g_ctx;
+}
+
+int usbq_evt_acquire(void) {
     pthread_mutex_lock(&g_evt.mu);
     if (g_evt.refcount++ == 0) {
         __atomic_store_n(&g_evt.stop, 0, __ATOMIC_RELEASE);
@@ -290,7 +325,7 @@ static int evt_acquire(void) {
     return 0;
 }
 
-static void evt_release(void) {
+void usbq_evt_release(void) {
     pthread_mutex_lock(&g_evt.mu);
     if (g_evt.refcount > 0 && --g_evt.refcount == 0 && g_evt.alive) {
         __atomic_store_n(&g_evt.stop, 1, __ATOMIC_RELEASE);
@@ -327,6 +362,30 @@ struct usbq_stream {
     uint64_t         overflow_bytes;
     int              wake_fd;        /* -1 = disabled */
 };
+
+/* Wake select()/poll() consumers on stream-stop transitions.
+ *
+ * The success branch in stream_xfer_cb already writes wake_fd on each
+ * data push. But every code path that flips s->stopping while
+ * select-based readers are blocked on wake_fd has to wake them too —
+ * otherwise an unplug leaves them stuck until their next poll timeout.
+ * The condvar broadcast wakes blocking usbq_stream_read callers; this
+ * helper covers the select-based ones. Non-blocking; if the pipe is
+ * already readable, dropping the byte is harmless (the consumer will
+ * see exactly one wake either way).
+ *
+ * Must be called with s->mu unlocked — write(2) can block on a full
+ * pipe (shouldn't here since it's non-blocking, but discipline). */
+static void stream_wake_select(usbq_stream_t *s) {
+    int fd;
+    pthread_mutex_lock(&s->mu);
+    fd = s->wake_fd;
+    pthread_mutex_unlock(&s->mu);
+    if (fd < 0) return;
+    const char zero = 0;
+    ssize_t w = write(fd, &zero, 1);
+    (void)w;
+}
 
 static void ring_push_locked(usbq_stream_t *s, const uint8_t *src, size_t len) {
     if (len == 0) return;
@@ -399,6 +458,7 @@ static void LIBUSB_CALL stream_xfer_cb(struct libusb_transfer *xfer) {
         s->stopping = 1;
         pthread_cond_broadcast(&s->cv);
         pthread_mutex_unlock(&s->mu);
+        stream_wake_select(s);
     }
 }
 
@@ -429,7 +489,7 @@ usbq_stream_t *usbq_stream_open(usbq_dev_t *dev, const usbq_stream_cfg_t *cfg) {
         s->urbs[i].stream = s;
         if (!s->urbs[i].buf || !s->urbs[i].xfer) goto fail;
     }
-    if (evt_acquire() != 0) goto fail;
+    if (usbq_evt_acquire() != 0) goto fail;
 
     for (uint32_t i = 0; i < depth; i++) {
         libusb_fill_bulk_transfer(s->urbs[i].xfer,
@@ -452,7 +512,8 @@ usbq_stream_t *usbq_stream_open(usbq_dev_t *dev, const usbq_stream_cfg_t *cfg) {
                 pthread_cond_wait(&s->cv, &s->mu);
             }
             pthread_mutex_unlock(&s->mu);
-            evt_release();
+            stream_wake_select(s);
+            usbq_evt_release();
             goto fail;
         }
     }
@@ -503,7 +564,7 @@ void usbq_stream_close(usbq_stream_t *s) {
     pthread_cond_destroy(&s->cv);
     free(s);
 
-    evt_release();
+    usbq_evt_release();
 }
 
 int usbq_stream_read(usbq_stream_t *s, void *buf, size_t cap, uint32_t timeout_ms) {
@@ -526,8 +587,12 @@ int usbq_stream_read(usbq_stream_t *s, void *buf, size_t cap, uint32_t timeout_m
     size_t want = cap;
     if (want > s->ring_used) want = s->ring_used;
     if (want == 0) {
+        /* No bytes left and the stream is stopping: surface a hard
+         * dead-device error so callers can distinguish unplug from a
+         * transient gap (which still returns 0). */
+        int stopping = s->stopping;
         pthread_mutex_unlock(&s->mu);
-        return 0;
+        return stopping ? -ENODEV : 0;
     }
     size_t first = s->ring_cap - s->ring_head;
     if (first > want) first = want;
@@ -584,6 +649,7 @@ int usbq_stream_restart(usbq_stream_t *s) {
             s->stopping = 1;
             pthread_cond_broadcast(&s->cv);
             pthread_mutex_unlock(&s->mu);
+            stream_wake_select(s);
             return rc;
         }
     }

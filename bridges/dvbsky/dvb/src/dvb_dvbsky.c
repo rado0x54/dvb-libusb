@@ -321,19 +321,12 @@ static void frontend_teardown(dvb_dvbsky_frontend_t *fe) {
     fe->handle.display_name = NULL;
 }
 
-static int open_device(const dvbsky_board_t *board, const char *vidpid,
-                       dvb_frontend_handle_t **out_handles, int max_out) {
+static int open_device_from_usb(const dvbsky_board_t *board, usbq_dev_t *usb,
+                                dvb_frontend_handle_t **out_handles, int max_out) {
     if (max_out < board->num_frontends) {
         DLOG("%s: caller has %d slot(s), need %d — skipping",
              board->name, max_out, board->num_frontends);
-        return 0;
-    }
-
-    usbq_dev_t *usb = usbq_open(vidpid);
-    if (!usb) return 0;
-    (void)usbq_disconnect_kernel_driver(usb);
-    if (usbq_claim_interface(usb, 0) < 0) {
-        DLOG("%s: usbq_claim_interface(0) failed", board->name);
+        usbq_release_interface(usb, 0);
         usbq_close(usb);
         return 0;
     }
@@ -394,6 +387,19 @@ fail:
     return 0;
 }
 
+static int open_device(const dvbsky_board_t *board, const char *vidpid,
+                       dvb_frontend_handle_t **out_handles, int max_out) {
+    usbq_dev_t *usb = usbq_open(vidpid);
+    if (!usb) return 0;
+    (void)usbq_disconnect_kernel_driver(usb);
+    if (usbq_claim_interface(usb, 0) < 0) {
+        DLOG("%s: usbq_claim_interface(0) failed", board->name);
+        usbq_close(usb);
+        return 0;
+    }
+    return open_device_from_usb(board, usb, out_handles, max_out);
+}
+
 /* ---- Public API -------------------------------------------------- */
 
 int dvb_dvbsky_open(const char *vidpid,
@@ -409,6 +415,42 @@ int dvb_dvbsky_open(const char *vidpid,
         return 0;
     }
     return open_device(board, vidpid, handles, max);
+}
+
+int dvb_dvbsky_open_by_addr(uint8_t bus_number, uint8_t device_address,
+                            dvb_frontend_handle_t **handles, int max) {
+    if (!handles || max <= 0) return 0;
+    if (!g_usbq_inited) {
+        if (usbq_init() != 0) return 0;
+        g_usbq_inited = 1;
+    }
+
+    usbq_dev_t *usb = usbq_open_by_addr(bus_number, device_address);
+    if (!usb) return 0;
+
+    uint16_t vid = 0, pid = 0;
+    if (usbq_get_vidpid(usb, &vid, &pid) != 0) {
+        usbq_close(usb);
+        return 0;
+    }
+    char vidpid[16];
+    snprintf(vidpid, sizeof(vidpid), "%04x:%04x", vid, pid);
+
+    const dvbsky_board_t *board = find_board_by_vidpid(vidpid);
+    if (!board) {
+        DLOG("no dvbsky board record for %s @ bus %u devaddr %u",
+             vidpid, (unsigned)bus_number, (unsigned)device_address);
+        usbq_close(usb);
+        return 0;
+    }
+
+    (void)usbq_disconnect_kernel_driver(usb);
+    if (usbq_claim_interface(usb, 0) < 0) {
+        DLOG("%s: usbq_claim_interface(0) failed", board->name);
+        usbq_close(usb);
+        return 0;
+    }
+    return open_device_from_usb(board, usb, handles, max);
 }
 
 int dvb_dvbsky_discover_all(dvb_frontend_handle_t **handles, int max) {
