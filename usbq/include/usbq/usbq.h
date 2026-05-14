@@ -77,6 +77,16 @@ usbq_dev_t *usbq_open_by_addr(uint8_t bus_number, uint8_t device_address);
 int         usbq_get_vidpid(usbq_dev_t *dev, uint16_t *vid_out,
                             uint16_t *pid_out);
 
+/* Read the libusb bus_number / device_address of an opened device.
+ * Hotplug LEFT events arrive keyed by (bus, devaddr); consumers
+ * that need to route a LEFT event back to a specific frontend
+ * handle keep the bus:devaddr captured at open time and match
+ * against the event payload. (Each `dvb_frontend_handle_t` from
+ * the bridge engines also carries these fields directly — this is
+ * the lower-level usbq accessor.) */
+int         usbq_get_bus_devaddr(usbq_dev_t *dev, uint8_t *bus_out,
+                                 uint8_t *devaddr_out);
+
 /* Enumerate plugged-in USB devices matching `vidpid` ("VVVV:PPPP"
  * hex) without opening any of them. Does not claim, does not bring
  * up; just walks the bus. Useful for "what hardware is here?"

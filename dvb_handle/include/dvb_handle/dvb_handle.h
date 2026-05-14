@@ -108,6 +108,15 @@ typedef struct dvb_frontend_handle {
      * owned by the engine. */
     const uint32_t            *supported_delsys;
     size_t                     supported_delsys_count;
+
+    /* libusb bus_number / device_address of the underlying USB
+     * device, captured at open time. Consumers that subscribe to
+     * dvb_hotplug LEFT events use these to route a departure event
+     * back to the matching handle(s) — every frontend of the same
+     * physical device carries identical values here. Stable for
+     * the lifetime of the handle. */
+    uint8_t                    bus_number;
+    uint8_t                    device_address;
 } dvb_frontend_handle_t;
 
 #ifdef __cplusplus

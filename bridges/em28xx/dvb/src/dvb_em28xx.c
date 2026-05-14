@@ -297,6 +297,9 @@ static int frontend_open(dvb_em28xx_dev_t *dev, int fn,
     fe->handle.bridge_lock  = &dev->bridge_lock;
     fe->handle.supported_delsys       = dev->board->supported_delsys;
     fe->handle.supported_delsys_count = dev->board->supported_delsys_count;
+    (void)usbq_get_bus_devaddr(dev->usb,
+                               &fe->handle.bus_number,
+                               &fe->handle.device_address);
     return 0;
 }
 

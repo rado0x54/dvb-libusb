@@ -148,6 +148,13 @@ int usbq_get_vidpid(usbq_dev_t *d, uint16_t *vid_out, uint16_t *pid_out) {
     return 0;
 }
 
+int usbq_get_bus_devaddr(usbq_dev_t *d, uint8_t *bus_out, uint8_t *devaddr_out) {
+    if (!d || !d->device) return -EINVAL;
+    if (bus_out)     *bus_out     = libusb_get_bus_number    (d->device);
+    if (devaddr_out) *devaddr_out = libusb_get_device_address(d->device);
+    return 0;
+}
+
 void usbq_close(usbq_dev_t *d) {
     if (!d) return;
     if (d->handle) libusb_close(d->handle);
