@@ -9,7 +9,7 @@ if(POLICY CMP0156)
 endif()
 
 project(dvb_libusb
-  VERSION 0.1.2
+  VERSION 0.1.3
   LANGUAGES C
   DESCRIPTION "Userspace libusb-based DVB driver bundle"
 )

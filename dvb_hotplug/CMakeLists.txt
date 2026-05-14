@@ -21,8 +21,8 @@ target_link_libraries(dvb_hotplug
 # Needs the three bridge engines' public headers to call their
 # *_supported_boards() at runtime for the VID:PID filter.
 target_include_directories(dvb_hotplug PRIVATE
-  ${CMAKE_SOURCE_DIR}/bridges/em28xx/dvb/include
-  ${CMAKE_SOURCE_DIR}/bridges/dib0700/dvb/include
-  ${CMAKE_SOURCE_DIR}/bridges/dvbsky/dvb/include
-  ${CMAKE_SOURCE_DIR}/usbq/include
+  ${PROJECT_SOURCE_DIR}/bridges/em28xx/dvb/include
+  ${PROJECT_SOURCE_DIR}/bridges/dib0700/dvb/include
+  ${PROJECT_SOURCE_DIR}/bridges/dvbsky/dvb/include
+  ${PROJECT_SOURCE_DIR}/usbq/include
 )
