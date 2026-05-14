@@ -18,6 +18,8 @@
 
 #include "dvb_handle/dvb_handle.h"
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,6 +27,12 @@ extern "C" {
 int  dvb_dvbsky_discover_all(dvb_frontend_handle_t **handles, int max);
 int  dvb_dvbsky_open(const char *vidpid,
                      dvb_frontend_handle_t **handles, int max);
+
+/* Open the specific device at USB bus_number:device_address. See
+ * dvb_em28xx_open_by_addr semantics. */
+int  dvb_dvbsky_open_by_addr(uint8_t bus_number, uint8_t device_address,
+                             dvb_frontend_handle_t **handles, int max);
+
 void dvb_dvbsky_shutdown(void);
 
 /* Read-only enumeration of every board this engine knows. See

@@ -29,6 +29,8 @@
 
 #include "dvb_handle/dvb_handle.h"
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,6 +50,17 @@ int dvb_em28xx_discover_all(dvb_frontend_handle_t **handles, int max);
  * fails). */
 int dvb_em28xx_open(const char *vidpid,
                        dvb_frontend_handle_t **handles, int max);
+
+/* Open the specific device at USB bus_number:device_address (as
+ * reported by libusb). Used by the hotplug arrival path when two
+ * boards with the same VID:PID are plugged in and the caller needs
+ * to bind to one specific physical device — dvb_em28xx_open by
+ * VID:PID string would re-open the first matching one and could
+ * collide with an already-active sibling. The board record is
+ * resolved from the device's actual VID:PID; returns 0 if no
+ * em28xx board record matches the descriptor at that address. */
+int dvb_em28xx_open_by_addr(uint8_t bus_number, uint8_t device_address,
+                            dvb_frontend_handle_t **handles, int max);
 
 /* Tear down everything the engine opened: chip clients, em28xx
  * bridges, USB devices. Idempotent. Caller must have stopped using
