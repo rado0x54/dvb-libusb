@@ -252,6 +252,20 @@ int em28xx_gpio_set(em28xx_dev_t *dev, enum em28xx_mode mode,
  * calling this. */
 int em28xx_capture_start(em28xx_dev_t *dev, int ts_index, int enable);
 
+/* One-time "wire up the second TS endpoint" sequence for boards with
+ * has_dual_ts (e.g. WinTV-dualHD). Direct port of the bulk-mode block
+ * in upstream em28xx_usb_probe (em28xx-cards.c, comment "Configure
+ * hardware to support TS2"): write R0B = 0x96, sleep 100 ms, write
+ * R0B = 0x80, sleep 100 ms. Skipping this leaves TS1 functional but
+ * TS2 disconnected — EP 0x85 emits a frozen 4-byte filler pattern
+ * even though the second demod locks normally.
+ *
+ * Call once at device bring-up, after em28xx_gpio_set and before
+ * frontend init / capture_start. Bulk transfer mode only; the ISOC
+ * variant (final byte 0x82) is not exposed since usbq streams
+ * everything via bulk. */
+int em28xx_enable_dual_ts_bulk(em28xx_dev_t *dev);
+
 /* Cached chip ID — populated by em28xx_open() via a single read of
  * EM28XX_R0A_CHIPID. Returns 0 if open() failed to read it.
  * Compare against EM28XX_CHIP_ID_*. */

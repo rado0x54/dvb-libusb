@@ -24,6 +24,42 @@
 #include "em28xx_priv.h"
 
 #include <errno.h>
+#include <time.h>
+
+int em28xx_enable_dual_ts_bulk(em28xx_dev_t *dev) {
+    if (!dev) return -EINVAL;
+    int chip = em28xx_chip_id(dev);
+    if (chip != EM28XX_CHIP_ID_EM2874 &&
+        chip != EM28XX_CHIP_ID_EM2884 &&
+        chip != EM28XX_CHIP_ID_EM28174 &&
+        chip != EM28XX_CHIP_ID_EM28178) {
+        return -ENOTSUP;
+    }
+
+    /* Magic R0B sequence from upstream em28xx_usb_probe: enables the
+     * second TS path on the bridge. Final byte 0x80 selects BULK on
+     * EP4/EP5 (ISO variant uses 0x82).
+     *
+     * TODO: bulk is hard-coded here because usbq only implements bulk
+     * URBs and we never call usbq_set_interface() — so we sit on alt 0,
+     * which on the WinTV-dualHD happens to expose EP 0x84/0x85 as
+     * bulk endpoints. For any em28xx-class device where alt 0 declares
+     * those endpoints as iso (or where bulk lives on a non-zero alt),
+     * libusb_fill_bulk_transfer would reject the URBs even with this
+     * 0x80 written. Mirror upstream's em28xx_check_usb_descriptor:
+     * scan all alts, record bulk-vs-iso + dvb_alt per endpoint,
+     * SET_INTERFACE to the chosen alt before streaming, and pick the
+     * matching R0B byte (0x80 bulk / 0x82 iso) here. Iso support also
+     * needs libusb_fill_iso_transfer plumbing in usbq. */
+    const struct timespec sleep_100ms = { 0, 100 * 1000 * 1000 };
+    int ret = em28xx_write_reg(dev, 0x0b, 0x96);
+    if (ret < 0) return ret;
+    nanosleep(&sleep_100ms, NULL);
+    ret = em28xx_write_reg(dev, 0x0b, 0x80);
+    if (ret < 0) return ret;
+    nanosleep(&sleep_100ms, NULL);
+    return 0;
+}
 
 int em28xx_capture_start(em28xx_dev_t *dev, int ts_index, int enable) {
     if (!dev || (ts_index != 0 && ts_index != 1)) {

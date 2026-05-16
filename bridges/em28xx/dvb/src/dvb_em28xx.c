@@ -375,6 +375,15 @@ static int open_device_from_usb(const em28xx_board_t *board, usbq_dev_t *usb,
     if (em28xx_gpio_set     (dev->bridge, EM28XX_MODE_DIGITAL,
                              board->gpio_seq) < 0)               goto fail;
 
+    /* Dual-TS boards (WinTV-dualHD): wire EP5 to TS2 packetizer. With-
+     * out this, TS1 still streams but TS2 emits a frozen filler word. */
+    if (board->num_frontends > 1) {
+        if (em28xx_enable_dual_ts_bulk(dev->bridge) < 0) {
+            ELOG("%s: dual-TS enable (R0B sequence) failed", board->name);
+            goto fail;
+        }
+    }
+
     struct i2c_adapter *parent_adap = em28xx_get_i2c_adapter(dev->bridge, 1);
     if (!parent_adap) goto fail;
 
